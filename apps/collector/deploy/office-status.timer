@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the AI Office status projection every 10 s
+
+[Timer]
+OnBootSec=8s
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

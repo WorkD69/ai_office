@@ -1,0 +1,71 @@
+[Unit]
+Description=AI Office exporter (read-only Hermes status -> /run/agent-office/snapshot.json)
+Documentation=https://github.com/WorkD69/ai_office/blob/main/apps/collector/DEPLOY.md
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m ai_office_collector export --config /etc/ai-office/collector.toml
+Environment=PYTHONPATH=/opt/ai-office/lib PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=10
+
+# --- identity: throwaway user that can READ, but WRITE nothing outside its /run dir ---
+DynamicUser=yes
+# Hermes data is root:750 / uid 10000:700; reading it needs DAC_READ_SEARCH, nothing more.
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+UMask=0077
+
+# --- output dir (snapshot.json is fchmod 0644; .work/ with SQLite copies stays 0700) ---
+RuntimeDirectory=agent-office
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# --- no network at all: even a bug cannot send Hermes data anywhere ---
+PrivateNetwork=yes
+# AF_UNIX stays: `systemctl is-active` talks to systemd over the D-Bus socket.
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+
+# --- filesystem: allow-list instead of a deny-list ---
+# DAC_READ_SEARCH bypasses file permissions, so hide whole trees and bind back only what
+# is needed: the Hermes data dir and the collector package. /opt, /var (incl. Docker's
+# container configs with env secrets), /srv, /mnt and /media become empty read-only tmpfs.
+TemporaryFileSystem=/opt:ro /var:ro /srv:ro /mnt:ro /media:ro
+BindReadOnlyPaths=/opt/hermes-platform/data /opt/ai-office/lib
+# Secrets inside the bound data dir (default profile). Named profiles: see
+# deploy/office-exporter.d/hide-profile-secrets.conf.example. "-" = ignore if missing.
+InaccessiblePaths=-/opt/hermes-platform/data/.env -/opt/hermes-platform/data/auth.json
+InaccessiblePaths=-/etc/ai-office/relay.env -/etc/shadow -/etc/gshadow -/etc/ssh
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+# Other processes are invisible. ProcSubset=pid is NOT used on purpose: it would hide
+# /proc/meminfo and /proc/loadavg, which the host metrics read.
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+
+# --- resources (measured: ~26 MB RSS + ~23 MB tmpfs copy of state.db) ---
+MemoryMax=96M
+CPUQuota=15%
+TasksMax=16
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-"""CLI: ``python -m ai_office_collector {once,export,relay,quota}``."""
+"""CLI: ``python -m ai_office_collector {once,export,project,relay,quota}``."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .config import Config, ConfigError, load_config
 from .host import LinuxProbe
+from .project import project
 from .quota import quota_from_hermes_usage
 from .relay import run_relay, validate_url
 from .snapshot import build_snapshot, write_atomic
@@ -32,6 +33,18 @@ def main(argv: list[str] | None = None) -> int:
 
     export = sub.add_parser("export", help="write snapshots periodically (no network needed)")
     export.add_argument("--config", type=Path, required=True)
+
+    proj = sub.add_parser(
+        "project", help="isolated mode: project systemd credentials into the exporter input"
+    )
+    proj.add_argument("--config", type=Path, required=True)
+    proj.add_argument(
+        "--credentials",
+        type=Path,
+        default=None,
+        help="dir with gateway / cron-<profile> credentials (default: $CREDENTIALS_DIRECTORY)",
+    )
+    proj.add_argument("--output", type=Path, default=Path("/run/ai-office-metrics"))
 
     relay = sub.add_parser("relay", help="forward snapshots to the worker over WebSocket")
     relay.add_argument("--snapshot", type=Path, default=Path("/run/agent-office/snapshot.json"))
@@ -59,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "export":
             return _export_loop(load_config(args.config))
+        if args.cmd == "project":
+            return _project(load_config(args.config), args.credentials, args.output)
         if args.cmd == "relay":
             return _relay(args.snapshot, args.allow_insecure)
         if args.cmd == "quota":
@@ -91,6 +106,23 @@ def _export_loop(config: Config) -> int:
             # stops forwarding it and the office shows the data as stale.
             log.error("export failed: %s", type(exc).__name__)
         time.sleep(max(interval - (time.monotonic() - started), 0.5))
+    return 0
+
+
+def _project(config: Config, credentials: Path | None, output: Path) -> int:
+    # Path("") would mean the current directory, so check the raw variable, not the Path.
+    env = os.environ.get("CREDENTIALS_DIRECTORY", "")
+    directory = credentials or (Path(env) if env else None)
+    if directory is None or not directory.is_dir():
+        log.error(
+            "no credentials directory (run under systemd LoadCredential= or pass --credentials)"
+        )
+        return 2
+    try:
+        project(config, directory, output, LinuxProbe())
+    except (OSError, ValueError) as exc:
+        log.error("projection failed: %s", type(exc).__name__)
+        return 1
     return 0
 
 

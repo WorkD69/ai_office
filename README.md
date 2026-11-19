@@ -46,12 +46,16 @@ panel.
  ── VPS ─────────┼─────────────────────────────────────────
    relay     outbound only, cannot read Hermes data
      ▲ /run/agent-office/snapshot.json (sanitised)
-   exporter  no network at all, reads Hermes state read-only
+   exporter  no network at all, no access to Hermes data
+     ▲ /run/ai-office-metrics (allow-listed projection)
+   status    no network; systemd hands it two Hermes files as credentials
 ```
 
 - **No inbound ports on the VPS.** The server dials out; the UI keeps working when the VPS is down.
-- **Privilege split.** The process that reads agent data has no network, and the process with
-  network access cannot read agent data. Details: [collector README](apps/collector/README.md).
+- **Privilege split.** No process with network access can read agent data, and no process that
+  touches agent data has a network. By default not even the exporter can open the Hermes data
+  directory: systemd hands a projection unit just two files as credentials. Details:
+  [collector README](apps/collector/README.md).
 - **One protocol, three runtimes.** zod schemas in `packages/protocol` are shared by the Worker and
   the UI. The Python collector is checked against them by a cross-language contract test.
 - **Free tier.** Sized for Cloudflare's free plan: the relay sends only when the (quantised)
@@ -77,7 +81,7 @@ licences to worry about. See [ASSETS.md](ASSETS.md).
 
 | Status             | In the office                    | Meaning                                    | Live data today                            |
 | ------------------ | -------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| `working`          | typing, monitor glowing          | active session with recent activity        | yes                                        |
+| `working`          | typing, monitor glowing          | active session with recent activity        | full collector mode only                   |
 | `waiting_you`      | raised hand, blinking `!` bubble | needs an approval or answer from me        | demo only — needs the Hermes API (phase 3) |
 | `waiting_external` | hourglass                        | waiting on an external service             | demo only                                  |
 | `error`            | red `!` and smoke                | gateway/platform failure or failed service | yes                                        |
@@ -122,6 +126,9 @@ and [collector DEPLOY.md](apps/collector/DEPLOY.md).
 
 ## Known limitations
 
+- **Isolated mode by default.** The default collector never reads session databases, so live
+  data shows `idle`/`error`/`offline`, failed jobs and host state, but not `working` or token
+  usage. The opt-in full mode adds them at the cost of a read capability.
 - **Read-only for now.** Control actions are designed ([ADR 0003](docs/adr/0003-control-plane.md))
   but not implemented.
 - **Desktop login** works through Telegram Desktop; a plain-browser login is not implemented yet.

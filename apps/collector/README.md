@@ -3,25 +3,38 @@
 Runs on the server next to [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 and feeds the office with a **sanitised, read-only** status snapshot. No inbound port is opened.
 
+Two modes. **Isolated mode is the default** and what `deploy/install.sh` installs.
+
+### Isolated mode (default)
+
 ```
- Hermes data (read-only)            /run/agent-office/               Cloudflare
- gateway_state.json  ─┐                                               worker
- <profile>/state.db  ─┼─► exporter ─► snapshot.json ─► relay ──wss──►  /api/collector
- <profile>/cron/...  ─┘   no network    (0644)          no Hermes
- systemctl is-active ─┘   DAC_READ_SEARCH only          access
- hermes usage --json ─► quota-probe (timer, root) ─► /run/agent-office-quota/quota.json
+ Hermes data dir                 /run/ai-office-metrics            /run/agent-office
+ gateway_state.json ─┐ systemd                                      snapshot.json
+ <profile>/cron/...  ─┘ LoadCredential ─► office-status ─► projection ─► exporter ─► relay ──wss──► worker
+                        (root copies     no network,     (allow-listed   no network,  outbound
+                         two files)      no Hermes dir    fields only)   no Hermes    only
+ systemctl is-active ───────────────────────┘
 ```
 
-Privileges are split on purpose:
-
-| Process | Can read Hermes data | Network | Runs as |
+| Process | Sees Hermes data | Network | Runs as |
 |---|---|---|---|
-| `exporter` | yes (via `CAP_DAC_READ_SEARCH`; filesystem allow-list: everything under /opt, /var, /srv is hidden except the Hermes data dir, known secrets are inaccessible) | **none** (`PrivateNetwork=yes`) | `DynamicUser` |
-| `relay` | **no** (`InaccessiblePaths`) | outbound only | `DynamicUser`, no capabilities |
-| `quota-probe` | no, only runs `hermes usage --json` | none of its own (`PrivateNetwork=yes`; the call runs inside the Hermes container) | root (Docker socket), fixed argv, writes only its own `/run/agent-office-quota` |
+| `office-status` (timer, 10 s) | only the two files systemd copies in as credentials | **none** | `DynamicUser`, no capabilities |
+| `exporter` | **no** (`/opt/hermes-platform` inaccessible) | **none** | `DynamicUser`, no capabilities |
+| `relay` | **no** | outbound only | `DynamicUser`, no capabilities |
+| `quota-probe` (optional, `--with-quota`) | no, runs `hermes usage --json` | none of its own | root (Docker socket), fixed argv |
 
-So a bug in the code that talks to the internet cannot read Hermes data, and the code that
-reads Hermes data cannot reach the internet.
+Trade-off: session databases are not projected, so the office shows `idle`/`error`/`offline`,
+failed cron jobs and host/service state, but **no `working` status and no token usage**.
+
+### Full mode (`deploy/full-mode/`, opt-in)
+
+The exporter additionally reads each profile's `state.db` (a private copy, never the original)
+to show `working` with the current activity line and today's token usage. To do that it needs
+`CAP_DAC_READ_SEARCH`; it still has no network and an allow-listed filesystem view, and known
+secret files are made inaccessible. Choose it only if you want those two features.
+
+So in both modes the code that talks to the internet cannot read Hermes data, and the code
+that reads Hermes data cannot reach the internet.
 
 ## What leaves the server
 
@@ -42,7 +55,7 @@ Hermes profiles (`source = "hermes"`), first match wins:
 |---|---|---|---|
 | 1 | `gateway_state.json` missing, not `running`, or `updated_at` older than 180 s | `offline` | reason |
 | 2 | the profile's platform (`telegram` / `<profile>:telegram`) is not `connected` | `error` | `Telegram gateway: <state>` |
-| 3 | latest session (ignoring `exclude_sources`) is open and active within 120 s | `working` | `last_activity_description`, else "In a conversation" (session titles are never read) |
+| 3 | *(full mode only)* latest session (ignoring `exclude_sources`) is open and active within 120 s | `working` | `last_activity_description`, else "In a conversation" (session titles are never read) |
 | 4 | otherwise | `idle` | — |
 
 Systemd agents (`source = "systemd"`), worst unit wins: `failed` → `error`; anything other than
@@ -53,10 +66,10 @@ Systemd agents (`source = "systemd"`), worst unit wins: `failed` → `error`; an
 approvals in memory and `runtime/active_sessions.json` carries no approval state. It will come
 from the Hermes API event stream in the control phase.
 
-Usage today = rows of `session_model_usage` whose `last_seen` is after local midnight. A session
+Usage today (full mode only) = rows of `session_model_usage` whose `last_seen` is after local midnight. A session
 spanning midnight is counted fully in the new day — good enough for a quota-oriented meter.
 
-## Why the exporter reads a private copy of `state.db`
+## Full mode: why the exporter reads a private copy of `state.db`
 
 A read-only SQLite connection to a WAL database must still create/map the `-shm` file next to
 it; without write access there SQLite fails with `SQLITE_READONLY_DIRECTORY`, and `immutable=1`

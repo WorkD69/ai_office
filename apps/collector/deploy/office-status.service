@@ -1,0 +1,57 @@
+[Unit]
+Description=AI Office status projection (Hermes credentials -> /run/ai-office-metrics)
+Documentation=https://github.com/WorkD69/ai_office/blob/main/apps/collector/DEPLOY.md
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -B -m ai_office_collector project --config /etc/ai-office/collector.toml --output /run/ai-office-metrics
+Environment=PYTHONPATH=/opt/ai-office/lib PYTHONDONTWRITEBYTECODE=1
+
+# --- inputs: systemd (as root) copies exactly these files into $CREDENTIALS_DIRECTORY ---
+# The process itself has no access to the Hermes data directory at all.
+LoadCredential=gateway:/opt/hermes-platform/data/gateway_state.json
+# cron jobs of each Hermes profile: see office-status.d/hermes-profiles.conf.example
+
+# --- identity: throwaway user, no capabilities ---
+DynamicUser=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+
+# --- output (0755 dir, 0644 files) read by the exporter ---
+RuntimeDirectory=ai-office-metrics
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# --- no network; AF_UNIX stays for `systemctl is-active` over D-Bus ---
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+
+# --- filesystem ---
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+InaccessiblePaths=/opt/hermes-platform -/run/docker.sock -/etc/ai-office/relay.env
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+
+# --- resources ---
+TimeoutStartSec=10
+MemoryMax=48M
+TasksMax=4
+Nice=10

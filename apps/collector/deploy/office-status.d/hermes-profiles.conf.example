@@ -1,0 +1,15 @@
+# Drop-in for office-status.service: hand the cron jobs of each Hermes profile to the
+# projection as a credential named "cron-<profile>" (the name must match the profile in
+# collector.toml). Only list files that exist: a missing credential file fails the unit.
+#
+#   sudo install -d /etc/systemd/system/office-status.service.d
+#   sudo cp hermes-profiles.conf.example \
+#        /etc/systemd/system/office-status.service.d/hermes-profiles.conf
+#   # edit the profile names / paths, then:
+#   sudo systemctl daemon-reload && sudo systemctl start office-status.service
+#
+# The default profile keeps its jobs at <hermes_home>/cron/jobs.json, named profiles at
+# <hermes_home>/profiles/<name>/cron/jobs.json.
+
+[Service]
+LoadCredential=cron-scout:/opt/hermes-platform/data/profiles/scout/cron/jobs.json

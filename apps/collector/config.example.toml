@@ -3,17 +3,17 @@
 # then replace the roster below with your own agents and units.
 
 [collector]
-# Hermes data directory on the host (mounted as /opt/data inside the Hermes container).
-hermes_home = "/opt/hermes-platform/data"
+# Isolated mode (default, installed by deploy/install.sh): office-status.service projects the
+# few needed fields of Hermes state into /run/ai-office-metrics, which the exporter sees
+# read-only at this path. Neither process can open the Hermes data directory.
+hermes_home = "/run/ai-office-input"
+# false = isolated mode: no session databases, so no "working" status and no token usage.
+# Full mode (deploy/full-mode/) sets this to true and points hermes_home at the real data dir.
+read_session_state = false
 output = "/run/agent-office/snapshot.json"
-# Optional; written by deploy/quota-probe.sh (its own root-owned directory).
+# Optional; written by deploy/quota-probe.sh (install with --with-quota).
 quota_file = "/run/agent-office-quota/quota.json"
-# Private scratch dir for SQLite copies (created 0700, so the relay cannot read it).
-# Needed because the exporter has no write access next to Hermes' state.db (see hermes.py).
-work_dir = "/run/agent-office/.work"
 interval_seconds = 5
-# A session counts as "working" if it is open and was active this recently.
-working_window_seconds = 120
 # Hermes refreshes gateway_state.json about every 30 s; older than this = offline.
 gateway_stale_seconds = 180
 # "Usage today" resets at local midnight in this IANA time zone (system time if omitted).
