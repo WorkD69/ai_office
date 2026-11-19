@@ -154,3 +154,53 @@ def test_relay_can_pin_the_egress_address(monkeypatch):
     monkeypatch.setenv("OFFICE_EGRESS_IPV4", "192.0.2.10")
     client = connect_without_redirects("wss://worker.example/api/collector", "t" * 40)
     assert client.connection_kwargs.get("local_addr") == ("192.0.2.10", 0)
+
+
+def test_session_projection_gives_working_status_and_usage(hermes, tmp_path, creds):
+    from datetime import timedelta
+
+    from conftest import minutes, ts
+
+    hermes.session(
+        "default",
+        source="telegram",
+        started_at=ts(NOW - minutes(3)),
+        last_activity_at=ts(NOW - minutes(0.5)),
+        last_activity_description="calling web_search",
+        title="Private chat about my salary",
+        model="gpt-6-luna",
+    )
+    hermes.usage(
+        "default",
+        api_call_count=4,
+        input_tokens=900,
+        output_tokens=40,
+        cache_read_tokens=800,
+        last_seen=ts(NOW - minutes(1)),
+    )
+    projection = tmp_path / "metrics"
+    cfg = make_config(
+        projection,
+        tmp_path,
+        timezone=None,
+        read_session_state=False,
+        session_source=str(hermes.home),
+        work_dir=str(tmp_path / "work"),
+    )
+
+    from ai_office_collector.project import project_sessions
+
+    project(cfg, creds, projection, FakeProbe())
+    project_sessions(cfg, projection, now=NOW)  # deterministic clock for the assertion below
+    text = (projection / "sessions" / "coordinator.json").read_text(encoding="utf-8")
+    assert "salary" not in text  # session titles never leave Hermes
+
+    snap = build_snapshot(cfg, FakeProbe(), now=NOW)
+    coord = next(a for a in snap["agents"] if a["id"] == "coordinator")
+    assert coord["status"] == "working" and coord["activity"] == "calling web_search"
+    assert coord["usageToday"]["apiCalls"] == 4 and coord["model"] == "gpt-6-luna"
+
+    # A projection that stopped updating must not keep the agent "working".
+    later = build_snapshot(cfg, FakeProbe(), now=NOW + timedelta(minutes=5))
+    coord = next(a for a in later["agents"] if a["id"] == "coordinator")
+    assert coord["status"] != "working" and coord["usageToday"] is None

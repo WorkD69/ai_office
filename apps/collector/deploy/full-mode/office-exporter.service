@@ -11,11 +11,10 @@ Restart=on-failure
 RestartSec=10
 
 # --- identity: throwaway user that can READ, but WRITE nothing outside its /run dir ---
-# A static system user, not DynamicUser=: with DynamicUser, systemd keeps RuntimeDirectory=
-# under /run/private (0700), so the next process in the pipeline could not read the output.
-# deploy/install.sh creates the user (no login shell, no home).
-User=ai-office-exporter
-Group=ai-office-exporter
+# DynamicUser without RuntimeDirectoryPreserve=: systemd moves preserved runtime directories
+# of dynamic users under /run/private (0700), where the relay could not read the snapshot.
+# The directory is recreated on start; the relay simply waits for the next snapshot.
+DynamicUser=yes
 # Hermes data is root:750 / uid 10000:700; reading it needs DAC_READ_SEARCH, nothing more.
 AmbientCapabilities=CAP_DAC_READ_SEARCH
 CapabilityBoundingSet=CAP_DAC_READ_SEARCH
@@ -25,7 +24,6 @@ UMask=0077
 # --- output dir (snapshot.json is fchmod 0644; .work/ with SQLite copies stays 0700) ---
 RuntimeDirectory=agent-office
 RuntimeDirectoryMode=0755
-RuntimeDirectoryPreserve=yes
 
 # --- no network at all: even a bug cannot send Hermes data anywhere ---
 PrivateNetwork=yes

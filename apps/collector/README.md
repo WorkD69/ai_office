@@ -19,12 +19,16 @@ Two modes. **Isolated mode is the default** and what `deploy/install.sh` install
 | Process | Sees Hermes data | Network | Runs as |
 |---|---|---|---|
 | `office-status` (timer, 10 s) | only the two files systemd copies in as credentials | **none** | system user `ai-office-status`, no capabilities |
-| `exporter` | **no** (`/opt/hermes-platform` inaccessible) | **none** | system user `ai-office-exporter`, no capabilities |
+| `exporter` | **no** (`/opt/hermes-platform` inaccessible) | **none** | `DynamicUser`, no capabilities |
 | `relay` | **no** | outbound only | `DynamicUser`, no capabilities |
 | `quota-probe` (optional, `--with-quota`) | no, runs `hermes usage --json` | none of its own | root (Docker socket), fixed argv |
 
-Trade-off: session databases are not projected, so the office shows `idle`/`error`/`offline`,
+By default session databases are not projected, so the office shows `idle`/`error`/`offline`,
 failed cron jobs and host/service state, but **no `working` status and no token usage**.
+The optional session projection
+([`office-status.d/session-projection.conf.example`](deploy/office-status.d/session-projection.conf.example))
+adds them: the network-less projection reads a private copy of `state.db` and writes only
+derived facts to `sessions/<agent>.json`; the exporter stays isolated.
 
 ### Full mode (`deploy/full-mode/`, opt-in)
 

@@ -62,6 +62,10 @@ class Settings:
     gateway_stale_seconds: float = 180.0
     timezone: str | None = None
     read_session_state: bool = True
+    #: Isolated mode only: Hermes data dir the *projection* reads state.db from (it has no
+    #: network and never writes there). The exporter then gets working status and usage
+    #: from the projection instead of reading Hermes itself.
+    session_source: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +120,7 @@ def parse_config(raw: dict[str, Any]) -> Config:
         gateway_stale_seconds=_positive(col, "gateway_stale_seconds", 180.0),
         timezone=timezone,
         read_session_state=read_session_state,
+        session_source=_path(col["session_source"]) if col.get("session_source") else None,
     )
 
     agents_raw = raw.get("agents")

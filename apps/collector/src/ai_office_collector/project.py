@@ -8,23 +8,30 @@ writes it in the Hermes directory layout, plus ``unit_states.json`` with ``syste
 is-active`` results. The exporter then reads this projection with
 ``read_session_state = false`` and also never touches Hermes data.
 
-Trade-off: session databases are not projected, so isolated mode shows no ``working``
-status and no token usage. See ``apps/collector/DEPLOY.md``.
+Optionally (``session_source`` in the config) the projection also reads each profile's
+``state.db`` through a private copy, never writing to Hermes, and writes only derived
+fields per agent to ``sessions/<agent id>.json``: whether the latest session is open, when
+it was last active, a sanitised activity line, the model and today's token counters.
+Message texts, prompts and titles are never read. Without it, isolated mode shows no
+``working`` status and no token usage. See ``apps/collector/DEPLOY.md``.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .config import Config, HermesSource
-from .hermes import profile_home
+from .config import Config, HermesSource, resolve_timezone
+from .hermes import StateDb, profile_home
 from .host import SystemProbe
 from .sanitize import clean_text
 from .snapshot import write_atomic
-from .timeutil import iso, parse_ts
+from .status import SessionView
+from .timeutil import iso, local_midnight, parse_ts
 
 GATEWAY_CREDENTIAL = "gateway"
 MAX_INPUT_BYTES = 1024 * 1024
@@ -59,6 +66,51 @@ def project(config: Config, credentials: Path, output: Path, probe: SystemProbe)
         write_atomic(profile_home(output, profile) / "cron" / "jobs.json", {"jobs": jobs})
 
     write_atomic(output / "unit_states.json", probe.unit_states(config.all_units()))
+    if config.settings.session_source is not None:
+        project_sessions(config, output)
+
+
+def project_sessions(config: Config, output: Path, now: datetime | None = None) -> None:
+    """Write ``sessions/<agent id>.json`` with derived, sanitised session facts per agent."""
+    s = config.settings
+    assert s.session_source is not None
+    now = now or datetime.now(UTC)
+    midnight = local_midnight(now, resolve_timezone(s.timezone))
+    for agent in config.agents:
+        src = agent.source
+        if not isinstance(src, HermesSource):
+            continue
+        target = output / "sessions" / f"{agent.id}.json"
+        db = StateDb(profile_home(s.session_source, src.profile) / "state.db", s.work_dir)
+        if not db.path.is_file():
+            write_atomic(target, {"available": False, "observedAt": iso(now)})
+            continue
+        try:
+            session, usage = db.latest_session(src.exclude_sources), db.usage_since(midnight)
+        except sqlite3.DatabaseError:
+            db.invalidate()  # a copy taken mid-checkpoint can be torn; retry once
+            session, usage = db.latest_session(src.exclude_sources), db.usage_since(midnight)
+        write_atomic(
+            target,
+            {
+                "available": True,
+                "observedAt": iso(now),
+                "latest": session_to_json(session),
+                "usage": usage.to_json(),
+            },
+        )
+
+
+def session_to_json(session: SessionView | None) -> dict[str, Any] | None:
+    if session is None:
+        return None
+    return {
+        "startedAt": iso(session.started_at),
+        "endedAt": iso(session.ended_at),
+        "lastActivityAt": iso(session.last_activity_at),
+        "description": clean_text(session.description, 160),
+        "model": clean_text(session.model, 60),
+    }
 
 
 def read_credential(path: Path) -> Any:

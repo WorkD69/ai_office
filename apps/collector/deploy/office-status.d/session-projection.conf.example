@@ -1,0 +1,29 @@
+# Optional drop-in for office-status.service: also project session facts (working status,
+# activity line, model, today's token usage) from each profile's state.db.
+#
+# The projection stays without network; it gets read access to the Hermes data dir only,
+# reads state.db through a private copy in /run/ai-office-metrics/.work (0700) and writes
+# derived fields to sessions/<agent>.json. The exporter remains fully isolated.
+# collector.toml needs:
+#   session_source = "/opt/hermes-platform/data"
+#   work_dir = "/run/ai-office-metrics/.work"
+#
+#   sudo install -d /etc/systemd/system/office-status.service.d
+#   sudo cp session-projection.conf.example \
+#        /etc/systemd/system/office-status.service.d/session-projection.conf
+#   sudo systemctl daemon-reload && sudo systemctl start office-status.service
+
+[Service]
+# Hermes data is root:750 / uid 10000:700; reading it needs DAC_READ_SEARCH, nothing more.
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+# Reset the base unit's InaccessiblePaths= (it hides the whole Hermes tree) and use an
+# allow-list instead: /opt, /var, /srv become empty except the data dir and the package.
+InaccessiblePaths=
+TemporaryFileSystem=/opt:ro /var:ro /srv:ro /mnt:ro /media:ro
+BindReadOnlyPaths=/opt/hermes-platform/data /opt/ai-office/lib
+# Secrets inside the data dir; add one pair per named profile. "-" = ignore if missing.
+InaccessiblePaths=-/opt/hermes-platform/data/.env -/opt/hermes-platform/data/auth.json
+InaccessiblePaths=-/opt/hermes-platform/data/profiles/scout/.env
+InaccessiblePaths=-/opt/hermes-platform/data/profiles/scout/auth.json
+InaccessiblePaths=-/run/docker.sock -/etc/ai-office/relay.env -/etc/shadow -/etc/gshadow -/etc/ssh

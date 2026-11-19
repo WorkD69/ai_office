@@ -80,6 +80,14 @@ rm -rf /opt/ai-office /run/agent-office /run/ai-office-metrics /run/agent-office
 
 Hermes keeps running throughout; it is never restarted by these steps.
 
+## Session projection (optional, recommended over full mode)
+
+Adds the `working` status, the activity line and today's token usage while the exporter
+stays isolated: install
+[`deploy/office-status.d/session-projection.conf.example`](deploy/office-status.d/session-projection.conf.example)
+as a drop-in for `office-status.service` and set `session_source` and `work_dir` in
+`collector.toml` (see the comments in both files).
+
 ## Full mode (optional)
 
 Full mode adds the `working` status and today's token usage by letting the exporter read a

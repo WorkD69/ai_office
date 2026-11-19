@@ -28,8 +28,8 @@ PREFIX=/opt/ai-office
 ETC=/etc/ai-office
 UNITS=/etc/systemd/system
 
-echo "==> system users (static, so their /run output stays readable by the next stage)"
-for user in ai-office-status ai-office-exporter; do
+echo "==> system user for the projection (its preserved /run output must stay readable)"
+for user in ai-office-status; do
   id "$user" >/dev/null 2>&1 || useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin "$user"
 done
 

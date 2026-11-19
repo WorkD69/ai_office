@@ -12,11 +12,10 @@ Restart=on-failure
 RestartSec=5
 
 # --- identity: throwaway user, no capabilities (it never reads Hermes data) ---
-# A static system user, not DynamicUser=: with DynamicUser, systemd keeps RuntimeDirectory=
-# under /run/private (0700), so the next process in the pipeline could not read the output.
-# deploy/install.sh creates the user (no login shell, no home).
-User=ai-office-exporter
-Group=ai-office-exporter
+# DynamicUser without RuntimeDirectoryPreserve=: systemd moves preserved runtime directories
+# of dynamic users under /run/private (0700), where the relay could not read the snapshot.
+# The directory is recreated on start; the relay simply waits for the next snapshot.
+DynamicUser=yes
 CapabilityBoundingSet=
 AmbientCapabilities=
 NoNewPrivileges=yes
@@ -27,7 +26,6 @@ BindReadOnlyPaths=/run/ai-office-metrics:/run/ai-office-input
 # --- output dir (snapshot.json is fchmod 0644) ---
 RuntimeDirectory=agent-office
 RuntimeDirectoryMode=0755
-RuntimeDirectoryPreserve=yes
 
 # --- no network at all ---
 PrivateNetwork=yes

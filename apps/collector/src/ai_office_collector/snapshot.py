@@ -12,11 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import AgentConfig, Config, HermesSource, SystemdSource, resolve_timezone
-from .hermes import StateDb, profile_home, read_cron_jobs, read_gateway
+from .hermes import StateDb, UsageToday, profile_home, read_cron_jobs, read_gateway
 from .host import SystemProbe
 from .protocol import PROTOCOL_VERSION
 from .sanitize import clean_text
-from .status import GatewayView, Verdict, hermes_status, systemd_status
+from .status import GatewayView, SessionView, Verdict, hermes_status, systemd_status
 from .timeutil import iso, local_midnight, parse_ts
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,42 @@ def build_snapshot(config: Config, probe: SystemProbe, now: datetime | None = No
     }
 
 
+#: Projected session facts older than this are ignored, so a stopped projection can never
+#: keep an agent "working".
+PROJECTION_MAX_AGE = timedelta(seconds=60)
+_USAGE_KEYS = ("apiCalls", "inputTokens", "outputTokens", "cacheReadTokens")
+
+
+def read_projected_session(
+    home: Path, agent_id: str, now: datetime
+) -> tuple[SessionView | None, UsageToday | None]:
+    try:
+        raw = json.loads((home / "sessions" / f"{agent_id}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None, None
+    if not isinstance(raw, dict) or raw.get("available") is not True:
+        return None, None
+    observed = parse_ts(raw.get("observedAt"))
+    if observed is None or abs(now - observed) > PROJECTION_MAX_AGE:
+        return None, None
+    latest, usage = raw.get("latest"), raw.get("usage")
+    session = None
+    if isinstance(latest, dict):
+        session = SessionView(
+            started_at=parse_ts(latest.get("startedAt")),
+            ended_at=parse_ts(latest.get("endedAt")),
+            last_activity_at=parse_ts(latest.get("lastActivityAt")),
+            description=clean_text(latest.get("description"), 160),
+            model=clean_text(latest.get("model"), 60),
+        )
+    counters = None
+    if isinstance(usage, dict):
+        values = [usage.get(k) for k in _USAGE_KEYS]
+        if all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in values):
+            counters = UsageToday(*values)
+    return session, counters
+
+
 def read_projected_unit_states(home: Path) -> dict[str, str]:
     try:
         states = json.loads((home / "unit_states.json").read_text(encoding="utf-8"))
@@ -81,15 +117,20 @@ def _agent(
     s = config.settings
     home = profile_home(s.hermes_home, src.profile)
     if not s.read_session_state:
+        # Isolated mode: session facts, if any, come from the projection (sessions/<id>.json).
+        session, usage = read_projected_session(s.hermes_home, agent.id, now)
         verdict = hermes_status(
             now,
             gateway,
             src.platform,
-            None,
+            session,
             working_window=timedelta(seconds=s.working_window_seconds),
             gateway_stale_after=timedelta(seconds=s.gateway_stale_seconds),
         )
         out = _base(agent, verdict)
+        out["lastActivityAt"] = iso(session.last_activity_at) if session else None
+        out["model"] = session.model if session else None
+        out["usageToday"] = usage.to_json() if usage else None
         out["cron"] = read_cron_jobs(home)
         return out
 

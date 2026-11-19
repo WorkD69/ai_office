@@ -13,9 +13,9 @@ LoadCredential=gateway:/opt/hermes-platform/data/gateway_state.json
 # cron jobs of each Hermes profile: see office-status.d/hermes-profiles.conf.example
 
 # --- identity: throwaway user, no capabilities ---
-# A static system user, not DynamicUser=: with DynamicUser, systemd keeps RuntimeDirectory=
-# under /run/private (0700), so the next process in the pipeline could not read the output.
-# deploy/install.sh creates the user (no login shell, no home).
+# A static system user, not DynamicUser=: this oneshot's output must survive between runs
+# (RuntimeDirectoryPreserve=yes), and systemd keeps preserved directories of dynamic users
+# under /run/private (0700), where the exporter could not read them. install.sh creates it.
 User=ai-office-status
 Group=ai-office-status
 CapabilityBoundingSet=

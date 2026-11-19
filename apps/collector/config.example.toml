@@ -11,6 +11,10 @@ hermes_home = "/run/ai-office-input"
 # Full mode (deploy/full-mode/) sets this to true and points hermes_home at the real data dir.
 read_session_state = false
 output = "/run/agent-office/snapshot.json"
+# Optional session projection (deploy/office-status.d/session-projection.conf.example):
+# the projection reads state.db from here and gives the exporter working status + usage.
+# session_source = "/opt/hermes-platform/data"
+# work_dir = "/run/ai-office-metrics/.work"
 # Optional; written by deploy/quota-probe.sh (install with --with-quota).
 quota_file = "/run/agent-office-quota/quota.json"
 interval_seconds = 5
