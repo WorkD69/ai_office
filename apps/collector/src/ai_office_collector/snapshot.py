@@ -64,6 +64,19 @@ def _agent(
     assert isinstance(src, HermesSource)
     s = config.settings
     home = profile_home(s.hermes_home, src.profile)
+    if not s.read_session_state:
+        verdict = hermes_status(
+            now,
+            gateway,
+            src.platform,
+            None,
+            working_window=timedelta(seconds=s.working_window_seconds),
+            gateway_stale_after=timedelta(seconds=s.gateway_stale_seconds),
+        )
+        out = _base(agent, verdict)
+        out["cron"] = read_cron_jobs(home)
+        return out
+
     db = StateDb(home / "state.db", s.work_dir)
     if not db.path.is_file():
         return _base(agent, Verdict("offline", "profile state.db not found"))

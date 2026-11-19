@@ -61,6 +61,7 @@ class Settings:
     working_window_seconds: float = 120.0
     gateway_stale_seconds: float = 180.0
     timezone: str | None = None
+    read_session_state: bool = True
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,9 @@ def parse_config(raw: dict[str, Any]) -> Config:
                 f"collector.timezone: unknown time zone {timezone!r} "
                 "(use an IANA name such as 'UTC' or 'Europe/Berlin'; install tzdata if missing)"
             ) from exc
+    read_session_state = col.get("read_session_state", True)
+    if not isinstance(read_session_state, bool):
+        raise ConfigError("collector.read_session_state must be true or false")
     settings = Settings(
         hermes_home=_path(_str(col, "hermes_home", "collector")),
         output=_path(col.get("output", "/run/agent-office/snapshot.json")),
@@ -111,6 +115,7 @@ def parse_config(raw: dict[str, Any]) -> Config:
         working_window_seconds=_positive(col, "working_window_seconds", 120.0),
         gateway_stale_seconds=_positive(col, "gateway_stale_seconds", 180.0),
         timezone=timezone,
+        read_session_state=read_session_state,
     )
 
     agents_raw = raw.get("agents")

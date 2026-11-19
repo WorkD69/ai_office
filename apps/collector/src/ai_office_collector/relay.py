@@ -26,7 +26,9 @@ import hashlib
 import json
 import logging
 import math
+import os
 import random
+import socket
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterator
@@ -227,13 +229,17 @@ def connect_without_redirects(url: str, token: str) -> Any:
         def process_redirect(self, exc: Exception) -> Exception | str:
             return exc
 
+    egress = os.environ.get("OFFICE_EGRESS_IPV4")
+    network = {"family": socket.AF_INET, "local_addr": (egress, 0)} if egress else {}
     return _NoRedirectConnect(
         url,
         additional_headers={"Authorization": f"Bearer {token}"},
+        proxy=None,
         max_size=MAX_MESSAGE_BYTES,
         open_timeout=15,
         ping_interval=20,
         ping_timeout=20,
+        **network,
     )
 
 
