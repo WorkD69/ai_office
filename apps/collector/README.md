@@ -18,8 +18,8 @@ Two modes. **Isolated mode is the default** and what `deploy/install.sh` install
 
 | Process | Sees Hermes data | Network | Runs as |
 |---|---|---|---|
-| `office-status` (timer, 10 s) | only the two files systemd copies in as credentials | **none** | `DynamicUser`, no capabilities |
-| `exporter` | **no** (`/opt/hermes-platform` inaccessible) | **none** | `DynamicUser`, no capabilities |
+| `office-status` (timer, 10 s) | only the two files systemd copies in as credentials | **none** | system user `ai-office-status`, no capabilities |
+| `exporter` | **no** (`/opt/hermes-platform` inaccessible) | **none** | system user `ai-office-exporter`, no capabilities |
 | `relay` | **no** | outbound only | `DynamicUser`, no capabilities |
 | `quota-probe` (optional, `--with-quota`) | no, runs `hermes usage --json` | none of its own | root (Docker socket), fixed argv |
 

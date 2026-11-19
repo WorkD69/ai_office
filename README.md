@@ -14,6 +14,8 @@ plain bots and scripts. They run on a small VPS that **opens no inbound ports**.
 
 <p align="center"><img src="apps/web/docs/screenshot-mobile.png" alt="Mobile / Telegram Mini App view" width="300"></p>
 
+**Live demo:** [ai-office.workd69.workers.dev](https://ai-office.workd69.workers.dev) (synthetic data).
+
 > Outside Telegram the app shows a **synthetic demo**. Real data is available only to the owner,
 > authenticated through Telegram.
 

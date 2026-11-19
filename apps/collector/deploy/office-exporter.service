@@ -12,7 +12,11 @@ Restart=on-failure
 RestartSec=5
 
 # --- identity: throwaway user, no capabilities (it never reads Hermes data) ---
-DynamicUser=yes
+# A static system user, not DynamicUser=: with DynamicUser, systemd keeps RuntimeDirectory=
+# under /run/private (0700), so the next process in the pipeline could not read the output.
+# deploy/install.sh creates the user (no login shell, no home).
+User=ai-office-exporter
+Group=ai-office-exporter
 CapabilityBoundingSet=
 AmbientCapabilities=
 NoNewPrivileges=yes

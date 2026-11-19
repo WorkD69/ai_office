@@ -27,12 +27,16 @@ the real deployment:
                          ^
                          |  outbound WSS, initiated by the VPS
  ── VPS ─────────────────┼──────────────────────────────────────────────
-   office-relay      (DynamicUser, venv + websockets, reads one JSON file)
+   office-relay      (DynamicUser, venv + websockets, cannot read Hermes data)
                          ^
                          |  /run/agent-office/snapshot.json  (sanitised)
    office-exporter   (stdlib only, PrivateNetwork=yes: no network at all)
-        reads: Hermes gateway_state.json, state.db (read-only), cron/jobs.json,
-               systemctl is-active <allow-list>, /proc
+        isolated mode (default): reads only the projection below, never Hermes data
+        full mode (opt-in): also reads a private copy of state.db with CAP_DAC_READ_SEARCH
+                         ^
+                         |  /run/ai-office-metrics  (allow-listed projection)
+   office-status     (timer, no network) gets gateway_state.json + cron/jobs.json
+                     from systemd LoadCredential=, plus systemctl is-active <allow-list>
 ```
 
 ## Components

@@ -11,7 +11,11 @@ Restart=on-failure
 RestartSec=10
 
 # --- identity: throwaway user that can READ, but WRITE nothing outside its /run dir ---
-DynamicUser=yes
+# A static system user, not DynamicUser=: with DynamicUser, systemd keeps RuntimeDirectory=
+# under /run/private (0700), so the next process in the pipeline could not read the output.
+# deploy/install.sh creates the user (no login shell, no home).
+User=ai-office-exporter
+Group=ai-office-exporter
 # Hermes data is root:750 / uid 10000:700; reading it needs DAC_READ_SEARCH, nothing more.
 AmbientCapabilities=CAP_DAC_READ_SEARCH
 CapabilityBoundingSet=CAP_DAC_READ_SEARCH

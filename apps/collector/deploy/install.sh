@@ -28,6 +28,11 @@ PREFIX=/opt/ai-office
 ETC=/etc/ai-office
 UNITS=/etc/systemd/system
 
+echo "==> system users (static, so their /run output stays readable by the next stage)"
+for user in ai-office-status ai-office-exporter; do
+  id "$user" >/dev/null 2>&1 || useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin "$user"
+done
+
 echo "==> package -> $PREFIX/lib"
 install -d -m 0755 "$PREFIX" "$PREFIX/lib"
 rm -rf "$PREFIX/lib/ai_office_collector.new"
