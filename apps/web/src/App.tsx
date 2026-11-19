@@ -139,7 +139,14 @@ export function App() {
       {narrow && header}
       <main className="layout">
         <div className={`scene${staleText ? ' scene--stale' : ''}`}>
-          {state ? (
+          {state && !state.snapshot ? (
+            <div className="scene__loading" role="status">
+              <div>
+                <strong>{t('scene.waitingTitle')}</strong>
+                {t('scene.waitingBody')}
+              </div>
+            </div>
+          ) : state ? (
             <ErrorBoundary
               fallback={<div className="scene__fallback">{t('scene.unavailable')}</div>}
             >

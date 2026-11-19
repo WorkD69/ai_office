@@ -1,10 +1,12 @@
 /* ------------------------------------------------------------------ tokens */
 :root {
-  --bg: var(--tg-theme-bg-color, #14121c);
-  --surface: var(--tg-theme-secondary-bg-color, #1d1a29);
-  --text: var(--tg-theme-text-color, #ece6d8);
-  --muted: var(--tg-theme-hint-color, #9b93ab);
-  --link: var(--tg-theme-link-color, #8fc8ff);
+  /* One dark palette everywhere: Telegram's light theme would clash with the pixel scene,
+     so the Mini App paints its own header/background instead (see telegram.ts). */
+  --bg: #14121c;
+  --surface: #1d1a29;
+  --text: #ece6d8;
+  --muted: #9b93ab;
+  --link: #8fc8ff;
   --surface-2: #26223a;
   --surface-2: color-mix(in srgb, var(--text) 7%, var(--surface));
   --border: #3a3350;
@@ -21,11 +23,6 @@
   --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   color-scheme: dark;
-}
-
-[data-telegram='light'] {
-  color-scheme: light;
-  --shadow: rgba(30, 20, 50, 0.15);
 }
 
 * {
@@ -106,7 +103,15 @@ button {
   display: grid;
   place-items: center;
   height: 100%;
+  padding: 24px;
   color: var(--muted);
+  text-align: center;
+}
+
+.scene__loading strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
 }
 
 .office-wrap {

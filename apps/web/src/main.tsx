@@ -13,7 +13,7 @@ const lang = detectLang(
   forcedLang ?? tg?.initDataUnsafe?.user?.language_code ?? navigator.language,
 );
 document.documentElement.lang = lang;
-if (tg) document.documentElement.dataset.telegram = tg.colorScheme ?? 'dark';
+if (tg) document.documentElement.dataset.telegram = 'true';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing');

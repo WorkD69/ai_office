@@ -2,6 +2,9 @@ export const en = {
   appTitle: 'AI Office',
   'conn.demo': 'Demo',
   'conn.connecting': 'Connecting…',
+  'scene.waitingTitle': 'Waiting for the first data from the server…',
+  'scene.waitingBody':
+    'Agents appear as soon as the collector on the VPS sends its first snapshot.',
   'conn.online': 'Live',
   'conn.reconnecting': 'Reconnecting…',
   'conn.unauthorized': 'Access denied',

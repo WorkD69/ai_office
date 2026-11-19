@@ -4,6 +4,8 @@ export const ru: Record<MessageKey, string> = {
   appTitle: 'AI Office',
   'conn.demo': 'Демо',
   'conn.connecting': 'Подключение…',
+  'scene.waitingTitle': 'Жду первые данные с сервера…',
+  'scene.waitingBody': 'Сотрудники появятся, как только коллектор на VPS пришлёт первый снимок.',
   'conn.online': 'В эфире',
   'conn.reconnecting': 'Переподключение…',
   'conn.unauthorized': 'Нет доступа',
