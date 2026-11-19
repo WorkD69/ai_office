@@ -29,7 +29,11 @@ def build_snapshot(config: Config, probe: SystemProbe, now: datetime | None = No
     s = config.settings
     midnight = local_midnight(now, resolve_timezone(s.timezone))
     gateway = read_gateway(s.hermes_home)
-    unit_states = probe.unit_states(config.all_units())
+    unit_states = (
+        probe.unit_states(config.all_units())
+        if s.read_session_state
+        else read_projected_unit_states(s.hermes_home)
+    )
 
     agents: list[Json] = []
     for agent in config.agents:
@@ -46,6 +50,18 @@ def build_snapshot(config: Config, probe: SystemProbe, now: datetime | None = No
         "quota": load_quota(s.quota_file) if s.quota_file else None,
         "host": _host(probe, config, unit_states),
     }
+
+
+def read_projected_unit_states(home: Path) -> dict[str, str]:
+    try:
+        states = json.loads((home / "unit_states.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log.warning("projected service states unavailable: %s", type(exc).__name__)
+        return {}
+    if not isinstance(states, dict):
+        log.warning("invalid projected service states")
+        return {}
+    return {name: state for name, state in states.items() if isinstance(state, str)}
 
 
 def _agent(
