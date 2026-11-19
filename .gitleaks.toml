@@ -1,0 +1,14 @@
+# Secret-scan configuration. Default rules apply everywhere; only test files, which contain
+# deliberately fake tokens to exercise the sanitiser and the auth code, are allow-listed.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic credentials in unit tests"
+paths = [
+  '''apps/collector/tests/''',
+  '''apps/worker/test/''',
+  '''apps/web/test/''',
+  '''packages/protocol/test/''',
+  '''apps/worker/\.dev\.vars\.example''',
+]

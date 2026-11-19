@@ -1,0 +1,74 @@
+# AI Office collector configuration (example).
+# Copy to config.toml (git-ignored) or /etc/ai-office/collector.toml on the server,
+# then replace the roster below with your own agents and units.
+
+[collector]
+# Hermes data directory on the host (mounted as /opt/data inside the Hermes container).
+hermes_home = "/opt/hermes-platform/data"
+output = "/run/agent-office/snapshot.json"
+# Optional; written by deploy/quota-probe.sh (its own root-owned directory).
+quota_file = "/run/agent-office-quota/quota.json"
+# Private scratch dir for SQLite copies (created 0700, so the relay cannot read it).
+# Needed because the exporter has no write access next to Hermes' state.db (see hermes.py).
+work_dir = "/run/agent-office/.work"
+interval_seconds = 5
+# A session counts as "working" if it is open and was active this recently.
+working_window_seconds = 120
+# Hermes refreshes gateway_state.json about every 30 s; older than this = offline.
+gateway_stale_seconds = 180
+# "Usage today" resets at local midnight in this IANA time zone (system time if omitted).
+timezone = "UTC"
+
+# ---- Desk occupants -------------------------------------------------------
+# source = "hermes":  a Hermes profile (status from gateway_state.json + state.db)
+# source = "systemd": a script or bot (status from `systemctl is-active`)
+
+[[agents]]
+id = "coordinator"
+name = "Coordinator"
+role = "Main assistant, single entry point from Telegram"
+room = "hq"
+kind = "llm"
+source = "hermes"
+profile = "default"
+# Sessions opened by other services through the API/broker are not "the coordinator working".
+exclude_sources = ["tool"]
+
+[[agents]]
+id = "scout"
+name = "Scout"
+role = "Finds opportunities on a schedule"
+room = "opportunities"
+kind = "llm"
+source = "hermes"
+profile = "scout"
+
+[[agents]]
+id = "trading-analyst"
+name = "Trading Analyst"
+role = "Tracks trade ideas (script + LLM broker)"
+room = "trading"
+kind = "worker"
+source = "systemd"
+units = ["trading-signals.service", "llm-broker.service"]
+
+[[agents]]
+id = "community-bot"
+name = "Community Bot"
+role = "Telegram community helper"
+room = "community"
+kind = "worker"
+source = "systemd"
+units = ["community-bot@prod.service"]
+
+[[agents]]
+id = "news-worker"
+name = "News Worker"
+role = "Collects community news"
+room = "community"
+kind = "worker"
+source = "systemd"
+units = ["news-worker.service"]
+
+[host]
+services = ["docker.service"]

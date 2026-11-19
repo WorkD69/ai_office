@@ -1,0 +1,102 @@
+{
+  "v": 1,
+  "generatedAt": "2026-11-19T12:00:00.000Z",
+  "agents": [
+    {
+      "id": "coordinator",
+      "name": "Coordinator",
+      "role": "Main assistant",
+      "room": "hq",
+      "kind": "llm",
+      "status": "working",
+      "activity": "Searching the web for flight prices",
+      "lastActivityAt": "2026-11-19T11:59:30.000Z",
+      "model": "gpt-6-luna",
+      "usageToday": {
+        "apiCalls": 12,
+        "inputTokens": 180000,
+        "outputTokens": 2400,
+        "cacheReadTokens": 150000
+      },
+      "cron": []
+    },
+    {
+      "id": "hunter",
+      "name": "Hunter",
+      "role": "Finds opportunities",
+      "room": "opportunities",
+      "kind": "llm",
+      "status": "idle",
+      "activity": null,
+      "lastActivityAt": "2026-11-19T02:10:00.000Z",
+      "model": "gpt-6-luna",
+      "usageToday": {
+        "apiCalls": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0
+      },
+      "cron": [
+        {
+          "id": "scan-a",
+          "name": "scan A",
+          "schedule": "5 8,14,20 * * *",
+          "enabled": true,
+          "nextRunAt": "2026-11-19T11:05:00.000Z",
+          "lastRunAt": "2026-11-19T05:05:00.000Z",
+          "lastStatus": "error"
+        },
+        {
+          "id": "daily",
+          "name": "daily digest",
+          "schedule": "0 22 * * *",
+          "enabled": true,
+          "nextRunAt": "2026-11-19T19:00:00.000Z",
+          "lastRunAt": null,
+          "lastStatus": null
+        }
+      ]
+    },
+    {
+      "id": "signals",
+      "name": "Signals",
+      "role": "Trading signals",
+      "room": "trading",
+      "kind": "worker",
+      "status": "error",
+      "activity": "broker failed",
+      "lastActivityAt": null,
+      "model": null,
+      "usageToday": null,
+      "cron": []
+    }
+  ],
+  "quota": {
+    "provider": "openai-codex",
+    "windows": [
+      {
+        "name": "5h",
+        "usedPercent": 41.2,
+        "resetsAt": "2026-11-19T14:00:00.000Z"
+      },
+      {
+        "name": "week",
+        "usedPercent": 6.0,
+        "resetsAt": null
+      }
+    ],
+    "observedAt": "2026-11-19T11:58:00.000Z"
+  },
+  "host": {
+    "memUsedMb": 1060.0,
+    "memTotalMb": 1967.0,
+    "diskUsedPercent": 73.0,
+    "load1": 0.07,
+    "services": [
+      {
+        "name": "docker.service",
+        "active": true
+      }
+    ]
+  }
+}

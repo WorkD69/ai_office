@@ -1,0 +1,5 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit real values.
+BOT_TOKEN=123456:replace-with-test-bot-token
+OWNER_TELEGRAM_ID=123456789
+COLLECTOR_TOKEN=replace-with-32-plus-random-bytes-base64url
+SESSION_SECRET=replace-with-32-plus-random-bytes-base64url

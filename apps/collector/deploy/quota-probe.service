@@ -1,0 +1,51 @@
+[Unit]
+Description=AI Office quota probe (hermes usage --json -> /run/agent-office-quota/quota.json)
+Documentation=https://github.com/WorkD69/ai_office/blob/main/apps/collector/DEPLOY.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Runs as root only because `docker exec` needs the Docker socket (root with access to the
+# socket is root-equivalent, so the sandbox below limits blast radius, it is not a jail).
+# The command and container name are fixed. `hermes usage` reads account rate-limit
+# windows; per its --help it does not run the model.
+ExecStart=/opt/ai-office/quota-probe.sh
+Environment=PYTHONPATH=/opt/ai-office/lib PYTHONDONTWRITEBYTECODE=1
+# docker CLI looks for ~/.docker; /root is hidden, so point it at an empty location.
+Environment=HOME=/run/agent-office-quota DOCKER_CONFIG=/run/agent-office-quota/.docker
+TimeoutStartSec=60
+Nice=10
+
+# Own output dir, written only by this root-owned unit (the exporter just reads it).
+RuntimeDirectory=agent-office-quota
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+UMask=0022
+
+# The Docker CLI talks to dockerd over /run/docker.sock (AF_UNIX); no IP networking needed.
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+# No capabilities: the socket is owned by root (uid 0), so plain DAC allows the connect.
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+MemoryMax=64M
+TasksMax=32

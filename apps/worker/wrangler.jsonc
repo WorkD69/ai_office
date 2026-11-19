@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ai-office",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  // The built web app is served as static assets; only /api/* reaches the Worker code.
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+
+  // A single Durable Object instance holds the office state and all WebSockets.
+  "durable_objects": {
+    "bindings": [{ "name": "OFFICE", "class_name": "Office" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Office"] }],
+
+  // Secrets (set with `wrangler secret put <NAME>`, never committed):
+  //   BOT_TOKEN          Telegram bot token of the Mini App bot (initData validation)
+  //   OWNER_TELEGRAM_ID  numeric Telegram user id allowed to open the office
+  //   COLLECTOR_TOKEN    bearer token of the VPS collector (>= 32 chars, else 503)
+  //   SESSION_SECRET     HMAC key for browser session tokens (>= 32 chars, else 503)
+}

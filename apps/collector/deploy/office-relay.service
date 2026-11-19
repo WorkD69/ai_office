@@ -1,0 +1,56 @@
+[Unit]
+Description=AI Office relay (snapshot.json -> outbound WebSocket to the Cloudflare worker)
+Documentation=https://github.com/WorkD69/ai_office/blob/main/apps/collector/DEPLOY.md
+After=network-online.target office-exporter.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# OFFICE_WORKER_URL=wss://.../api/collector and COLLECTOR_TOKEN=... (root:root 0600)
+EnvironmentFile=/etc/ai-office/relay.env
+Environment=PYTHONPATH=/opt/ai-office/lib PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/ai-office/venv/bin/python -m ai_office_collector relay --snapshot /run/agent-office/snapshot.json
+Restart=always
+RestartSec=5
+
+# --- identity: throwaway user, no capabilities ---
+DynamicUser=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+UMask=0077
+
+# --- network: outbound only (no listening sockets are opened by the code) ---
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# --- filesystem: may read the snapshot, nothing of Hermes ---
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+InaccessiblePaths=/opt/hermes-platform /etc/ai-office/collector.toml
+ReadOnlyPaths=/run/agent-office
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+
+# --- resources ---
+MemoryMax=96M
+CPUQuota=15%
+TasksMax=16
+
+[Install]
+WantedBy=multi-user.target

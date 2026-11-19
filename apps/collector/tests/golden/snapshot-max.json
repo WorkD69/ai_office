@@ -1,0 +1,544 @@
+{
+  "v": 1,
+  "generatedAt": "2026-11-19T12:00:00.000Z",
+  "agents": [
+    {
+      "id": "coordinator",
+      "name": "Coordinator",
+      "role": "Main assistant",
+      "room": "hq",
+      "kind": "llm",
+      "status": "working",
+      "activity": "Very long activity line with words Very long activity line with words Very long activity line with words Very long activity line with words Very long activity…",
+      "lastActivityAt": "2026-11-19T12:00:00.000Z",
+      "model": "gpt model gpt model gpt model gpt model gpt model gpt model…",
+      "usageToday": {
+        "apiCalls": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0
+      },
+      "cron": []
+    },
+    {
+      "id": "hunter",
+      "name": "Hunter",
+      "role": "Finds opportunities",
+      "room": "opportunities",
+      "kind": "llm",
+      "status": "idle",
+      "activity": null,
+      "lastActivityAt": "2026-11-19T11:30:00.000Z",
+      "model": null,
+      "usageToday": {
+        "apiCalls": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0
+      },
+      "cron": [
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-2",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-3",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-4",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-5",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-6",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-7",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-8",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-9",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-10",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-11",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-12",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-13",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-14",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-15",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-16",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-17",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-18",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-19",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-20",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-21",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-22",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-23",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-24",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-25",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-26",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-27",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-28",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-29",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-30",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-31",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-32",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-33",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-34",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-35",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-36",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-37",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-38",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-39",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-40",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-41",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-42",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-43",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-44",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-45",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-46",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-47",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-48",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-49",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        },
+        {
+          "id": "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj-50",
+          "name": "Long job name Long job name Long job name Long job name Long job name Long job…",
+          "schedule": "every 2 hours every 2 hours every 2 hours every 2 hours every 2 hours every 2 h…",
+          "enabled": true,
+          "nextRunAt": null,
+          "lastRunAt": null,
+          "lastStatus": "error"
+        }
+      ]
+    },
+    {
+      "id": "signals",
+      "name": "Signals",
+      "role": "Trading signals",
+      "room": "trading",
+      "kind": "worker",
+      "status": "idle",
+      "activity": null,
+      "lastActivityAt": null,
+      "model": null,
+      "usageToday": null,
+      "cron": []
+    }
+  ],
+  "quota": {
+    "provider": "provider provider provider provider pro…",
+    "windows": [
+      {
+        "name": "window window windo…",
+        "usedPercent": 100.0,
+        "resetsAt": null
+      },
+      {
+        "name": "window window windo…",
+        "usedPercent": 100.0,
+        "resetsAt": null
+      },
+      {
+        "name": "window window windo…",
+        "usedPercent": 100.0,
+        "resetsAt": null
+      },
+      {
+        "name": "window window windo…",
+        "usedPercent": 100.0,
+        "resetsAt": null
+      }
+    ],
+    "observedAt": "2026-11-19T11:58:00.000Z"
+  },
+  "host": {
+    "memUsedMb": 1060.0,
+    "memTotalMb": 1967.0,
+    "diskUsedPercent": 73.0,
+    "load1": 0.07,
+    "services": [
+      {
+        "name": "docker.service",
+        "active": true
+      }
+    ]
+  }
+}

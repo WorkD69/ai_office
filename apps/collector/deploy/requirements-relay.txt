@@ -1,0 +1,7 @@
+# Relay runtime dependency, pinned with hashes (pip install --require-hashes).
+# Regenerate from https://pypi.org/pypi/websockets/<version>/json when upgrading.
+websockets==15.0.1 \
+    --hash=sha256:8dd8327c795b3e3f219760fa603dcae1dcc148172290a8ab15158cf85a953413 \
+    --hash=sha256:64dee438fed052b52e4f98f76c5790513235efaa1ef7f3f2192c392cd7c91b65 \
+    --hash=sha256:f7a866fbc1e97b5c617ee4116daaa09b722101d4a3c170c787450ba409f9736f \
+    --hash=sha256:82544de02076bafba038ce055ee6412d68da13ab47f0c60cab827346de828dee

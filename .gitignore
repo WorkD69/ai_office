@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+.DS_Store
+# real deployment config of the collector lives only on the server
+apps/collector/config.toml
