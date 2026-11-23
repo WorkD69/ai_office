@@ -87,7 +87,10 @@ if [ "$ENABLE" -eq 1 ]; then
   echo "==> enabling services"
   systemctl enable --now office-status.timer
   systemctl start office-status.service
-  systemctl enable --now office-exporter.service
+  # restart, not just enable --now: an already running exporter would keep the old code
+  # (e.g. writing old-protocol snapshots that the new relay drops).
+  systemctl enable office-exporter.service
+  systemctl restart office-exporter.service
   if [ "$QUOTA" -eq 1 ]; then
     systemctl enable --now quota-probe.timer
   fi
