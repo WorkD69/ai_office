@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,17 @@ from ai_office_collector.config import (
 )
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "config.example.toml"
+#: Chat link cases shared with the zod schema tests (packages/protocol).
+CHAT_URLS = json.loads(
+    (
+        Path(__file__).resolve().parents[3]
+        / "packages"
+        / "protocol"
+        / "test"
+        / "fixtures"
+        / "chat-urls.json"
+    ).read_text(encoding="utf-8")
+)
 
 
 def base(**agent):
@@ -106,3 +118,27 @@ def test_missing_and_invalid_files(tmp_path):
     bad.write_text("[collector\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="invalid TOML"):
         load_config(bad)
+
+
+@pytest.mark.parametrize("url", CHAT_URLS["valid"])
+def test_shared_valid_chat_urls(url):
+    assert parse_config(base(chat_url=url)).agents[0].chat_url == url
+
+
+@pytest.mark.parametrize("url", CHAT_URLS["invalid"])
+def test_shared_invalid_chat_urls(url):
+    with pytest.raises(ConfigError, match="chat_url must be"):
+        parse_config(base(chat_url=url))
+
+
+# Zod's .max() counts UTF-16 code units; an emoji outside the BMP is two of them.
+EMOJI = "\U0001f642"
+
+
+def test_lengths_are_counted_in_utf16_units_like_zod():
+    agent = parse_config(base(summary=EMOJI * 60, project=EMOJI * 24)).agents[0]
+    assert (agent.summary, agent.project) == (EMOJI * 60, EMOJI * 24)
+    with pytest.raises(ConfigError, match="summary is longer than 120"):
+        parse_config(base(summary=EMOJI * 61))
+    with pytest.raises(ConfigError, match="project is longer than 48"):
+        parse_config(base(project=EMOJI * 25))

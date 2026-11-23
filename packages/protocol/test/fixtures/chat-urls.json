@@ -1,0 +1,23 @@
+{
+  "_comment": "Chat links checked by both the zod schema and the Python collector config.",
+  "valid": [
+    "https://t.me/example_office_bot",
+    "https://t.me/abcde",
+    "https://t.me/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "https://t.me/example_office_bot?start=hello-1_2"
+  ],
+  "invalid": [
+    "https://t.me/example_office_bot\n",
+    "https://t.me/example_office_bot\nhttps://evil.example",
+    "http://t.me/example_office_bot",
+    "https://t.me.evil.example/x_bot",
+    "https://evil.example/t.me/x_bot",
+    "https://user@t.me/example_office_bot",
+    "https://t.me/abcd",
+    "https://t.me/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "https://t.me/example_office_bot?start=",
+    "https://t.me/example_office_bot/extra",
+    "javascript:alert(1)",
+    " https://t.me/example_office_bot"
+  ]
+}

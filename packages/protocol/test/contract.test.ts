@@ -38,3 +38,25 @@ describe('collector contract', () => {
     expect(parsed.quotas.length).toBeGreaterThan(0);
   });
 });
+
+describe('chat link cases shared with the Python collector', () => {
+  const path = fileURLToPath(new URL('./fixtures/chat-urls.json', import.meta.url));
+  const cases = JSON.parse(readFileSync(path, 'utf8')) as { valid: string[]; invalid: string[] };
+
+  it.each(cases.valid)('accepts %j', (url) => {
+    expect(Agent.shape.chatUrl.safeParse(url).success).toBe(true);
+  });
+
+  it.each(cases.invalid)('rejects %j', (url) => {
+    expect(Agent.shape.chatUrl.safeParse(url).success).toBe(false);
+  });
+});
+
+describe('collector length limits count UTF-16 units like zod', () => {
+  it('snapshot-max.json carries emoji text exactly at the limits', () => {
+    const parsed = Snapshot.parse(golden('snapshot-max.json'));
+    const emoji = parsed.agents.find((a) => a.summary?.includes('\u{1F642}'));
+    expect(emoji?.summary?.length).toBe(120);
+    expect(emoji?.project?.length).toBe(48);
+  });
+});
