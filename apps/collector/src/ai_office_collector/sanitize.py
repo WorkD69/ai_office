@@ -64,8 +64,27 @@ def redact(text: str) -> str:
     return _PHONE.sub(_phone, text)
 
 
+def utf16_len(text: str) -> int:
+    """Length as zod's ``.max()`` counts it: UTF-16 code units (an emoji can be two)."""
+    return len(text.encode("utf-16-le")) // 2
+
+
+def clamp_utf16(text: str, limit: int) -> str:
+    """Cut ``text`` to at most ``limit`` UTF-16 units, ending with an ellipsis when cut."""
+    if utf16_len(text) <= limit:
+        return text
+    budget = max(limit - 1, 0)  # room for the ellipsis (one unit)
+    out: list[str] = []
+    for ch in text:
+        budget -= utf16_len(ch)
+        if budget < 0:
+            break
+        out.append(ch)
+    return "".join(out).rstrip() + "…"
+
+
 def clean_text(value: object, limit: int) -> str | None:
-    """Return a display-safe single-line string no longer than ``limit``, or None."""
+    """Return a display-safe single-line string, at most ``limit`` UTF-16 units, or None."""
     if value is None:
         return None
     text = value if isinstance(value, str) else str(value)
@@ -74,9 +93,7 @@ def clean_text(value: object, limit: int) -> str | None:
     if not text:
         return None
     text = redact(text)
-    if len(text) > limit:
-        text = text[: max(limit - 1, 0)].rstrip() + "…"
-    return text
+    return clamp_utf16(text, limit)
 
 
 _SLUG_BAD = re.compile(r"[^a-z0-9-]+")

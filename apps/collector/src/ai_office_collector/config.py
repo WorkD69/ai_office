@@ -12,7 +12,7 @@ from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .protocol import CHAT_URL_RE
-from .sanitize import clean_text
+from .sanitize import clean_text, utf16_len
 
 AGENT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 ROOM_RE = re.compile(r"^[a-z0-9-]{1,32}$")
@@ -171,10 +171,10 @@ def _parse_agent(item: dict[str, Any], where: str) -> AgentConfig:
     if not ROOM_RE.match(room):
         raise ConfigError(f"{where}.room must match {ROOM_RE.pattern}")
     name = _str(item, "name", where)
-    if len(name) > 40:
+    if utf16_len(name) > 40:
         raise ConfigError(f"{where}.name is longer than 40 characters")
     role = str(item.get("role", ""))
-    if len(role) > 80:
+    if utf16_len(role) > 80:
         raise ConfigError(f"{where}.role is longer than 80 characters")
     kind = item.get("kind", "llm")
     if kind not in ("llm", "worker", "dev"):
@@ -204,7 +204,9 @@ def _parse_agent(item: dict[str, Any], where: str) -> AgentConfig:
 
     chat_url = item.get("chat_url")
     if chat_url is not None and (
-        not isinstance(chat_url, str) or len(chat_url) > 200 or not CHAT_URL_RE.match(chat_url)
+        not isinstance(chat_url, str)
+        or utf16_len(chat_url) > 200
+        or not CHAT_URL_RE.fullmatch(chat_url)
     ):
         raise ConfigError(f"{where}.chat_url must be https://t.me/<username>")
 
@@ -229,7 +231,7 @@ def _optional_text(item: dict[str, Any], key: str, where: str, limit: int) -> st
     if not isinstance(value, str):
         raise ConfigError(f"{where}.{key} must be a string")
     text = " ".join(value.split())
-    if len(text) > limit:
+    if utf16_len(text) > limit:
         raise ConfigError(f"{where}.{key} is longer than {limit} characters")
     return clean_text(text, limit)
 

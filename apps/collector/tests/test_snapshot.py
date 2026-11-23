@@ -240,9 +240,10 @@ def test_worst_case_lengths_stay_within_schema_limits(hermes, tmp_path):
     cfg = make_config(hermes.home, tmp_path, timezone=None)
     longest = replace(
         cfg.agents[1],
-        summary="Описание агента " * 7 + "конец ок",  # exactly 120
+        # Exactly at the limits in UTF-16 units (what zod counts): 120 and 48.
+        summary="Описание агента " * 6 + "\U0001f642" * 12,
         chat_url="https://t.me/" + "b" * 32 + "?start=" + "s" * 64,
-        project="p" * 48,
+        project="p" * 24 + "\U0001f642" * 12,
     )
     cfg = replace(cfg, agents=(cfg.agents[0], longest, *cfg.agents[2:]))
     snap = build_snapshot(cfg, FakeProbe({}), now=NOW)
