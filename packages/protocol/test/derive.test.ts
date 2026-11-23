@@ -217,20 +217,33 @@ describe('diffSnapshots', () => {
     expect(FeedEvent.safeParse(event).success).toBe(true);
   });
 
-  it('never lets reason params overwrite the name, status or reason code', () => {
+  it('never lets reason params pose as message keys (name, status, reason, activity, ...)', () => {
+    const params = {
+      name: 'x',
+      status: 'y',
+      reason: 'z',
+      activity: 'fake activity',
+    };
     const [event] = diffSnapshots(
       snap([agent()]),
-      snap(
-        [
-          agent({
-            status: 'error',
-            reason: { code: 'unit_failed', params: { name: 'x', status: 'y', reason: 'z' } },
-          }),
-        ],
-        T1,
-      ),
+      snap([agent({ status: 'error', reason: { code: 'unit_failed', params } })], T1),
     );
     expect(event?.params).toEqual({ name: 'Coordinator', status: 'error', reason: 'unit_failed' });
+    const inbox = deriveInbox(
+      snap([
+        agent({ status: 'error', reason: { code: 'unit_failed', params } }),
+        agent({
+          id: 'bot',
+          kind: 'worker',
+          status: 'offline',
+          reason: { code: 'unit_down', params: { job: 'j', outcome: 'o', detail: 'd' } },
+        }),
+      ]),
+    );
+    expect(inbox.map((i) => i.params)).toEqual([
+      { name: 'Coordinator', reason: 'unit_failed' },
+      { name: 'Coordinator', reason: 'unit_down' },
+    ]);
   });
 
   it('reports a new activity of a working agent', () => {

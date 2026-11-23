@@ -158,13 +158,29 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
   return items.sort((x, y) => INBOX_ORDER[x.kind] - INBOX_ORDER[y.kind]);
 }
 
+/** Keys feed events and inbox items use themselves; a reason param may never take one over. */
+const MESSAGE_KEYS: ReadonlySet<string> = new Set([
+  'name',
+  'status',
+  'reason',
+  'activity',
+  'job',
+  'outcome',
+  'detail',
+]);
+
 /**
- * The agent's reason flattened into message params: `reason` (the code) plus its params. The
- * caller spreads it first, so its own keys (`name`, `status`) always win over a reason param.
+ * The agent's reason flattened into message params: `reason` (the code) plus its params, minus
+ * any param named like a message key, so a reason can never pose as the agent's activity.
  */
 function reasonParams(agent: Agent): MessageParams {
   if (!agent.reason) return {};
-  return { ...agent.reason.params, reason: agent.reason.code };
+  const params: MessageParams = {};
+  for (const [key, value] of Object.entries(agent.reason.params)) {
+    if (!MESSAGE_KEYS.has(key)) params[key] = value;
+  }
+  params.reason = agent.reason.code;
+  return params;
 }
 
 function ev(
