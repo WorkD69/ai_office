@@ -1,7 +1,13 @@
 import { DurableObject } from 'cloudflare:workers';
 import { CloseCode, WS_SUBPROTOCOL, type FeedEvent, type ServerMessage } from '@ai-office/protocol';
 import { ROLE_HEADER, SESSION_EXP_HEADER } from './headers.js';
-import { isSessionExpired, OfficeCore, type OfficeStore, type StoredSnapshot } from './core.js';
+import {
+  isSessionExpired,
+  OfficeCore,
+  type OfficeStore,
+  type PersistedSnapshot,
+  type StoredSnapshot,
+} from './core.js';
 import type { Env } from './env.js';
 
 type SocketRole = 'collector' | 'viewer';
@@ -205,11 +211,11 @@ class SqlOfficeStore implements OfficeStore {
     );
   }
 
-  loadSnapshot(): StoredSnapshot | null {
+  loadSnapshot(): PersistedSnapshot | null {
     const row = this.sql
       .exec<{ value: string }>(`SELECT value FROM kv WHERE key = 'snapshot'`)
       .toArray()[0];
-    return row ? (JSON.parse(row.value) as StoredSnapshot) : null;
+    return row ? (JSON.parse(row.value) as PersistedSnapshot) : null;
   }
 
   saveSnapshot(value: StoredSnapshot): void {

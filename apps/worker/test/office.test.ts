@@ -59,7 +59,7 @@ function setup() {
       JSON.stringify({
         type: 'snapshot',
         snapshot: {
-          v: 1,
+          v: 2,
           generatedAt: new Date(Date.now()).toISOString(),
           agents: [
             {
@@ -76,7 +76,7 @@ function setup() {
               cron: [],
             },
           ],
-          quota: null,
+          quotas: [],
           host: null,
         },
       }),

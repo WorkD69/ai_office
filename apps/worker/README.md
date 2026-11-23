@@ -67,9 +67,12 @@ web client calls `GET /api/session` to tell an expired session from a network fa
 - **The newest collector wins.** A new authenticated collector connection replaces the old one
   (`4409`), so two holders of the same token would evict each other.
 - Unchanged snapshots are not re-persisted more often than every 60 s. "Unchanged" ignores
-  `generatedAt`, `quota.observedAt` and host-metric noise (RAM rounded to 32 MB, load to 0.25,
+  `generatedAt`, `quotas[].observedAt` and host-metric noise (RAM rounded to 32 MB, load to 0.25,
   disk to 1 %).
 - Only full `state` messages are broadcast; the protocol's `event` message type is reserved.
+- Storage written by protocol v1 stays readable: the saved v1 snapshot is upgraded on load
+  (`restoreSnapshot` in `src/core.ts`), and old feed events keep their English `text` (new ones
+  carry a `code` + `params` that the web app translates).
 
 ## Secrets
 

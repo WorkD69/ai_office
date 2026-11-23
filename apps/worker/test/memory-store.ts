@@ -1,13 +1,19 @@
 import type { FeedEvent } from '@ai-office/protocol';
-import type { OfficeStore, StoredSnapshot } from '../src/core.js';
+import type { OfficeStore, PersistedSnapshot, StoredSnapshot } from '../src/core.js';
 
 /** In-memory OfficeStore for tests (the Durable Object uses SQLite). */
 export class MemoryOfficeStore implements OfficeStore {
-  private stored: StoredSnapshot | null = null;
-  private feed: FeedEvent[] = [];
+  private stored: PersistedSnapshot | null;
+  private feed: FeedEvent[];
   saves = 0;
 
-  loadSnapshot(): StoredSnapshot | null {
+  /** `seed` stands in for what an older deployment left in storage (oldest feed event first). */
+  constructor(seed: { snapshot?: PersistedSnapshot; feed?: FeedEvent[] } = {}) {
+    this.stored = seed.snapshot ?? null;
+    this.feed = [...(seed.feed ?? [])];
+  }
+
+  loadSnapshot(): PersistedSnapshot | null {
     return this.stored;
   }
   saveSnapshot(value: StoredSnapshot): void {
