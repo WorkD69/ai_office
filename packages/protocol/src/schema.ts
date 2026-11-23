@@ -67,11 +67,11 @@ export type AgentCounter = z.infer<typeof AgentCounter>;
  * own free text stays in `Agent.activity`; these are the collector's fixed reasons. Params:
  * - `gateway_missing` / `gateway_stopped` / `gateway_stale` — none (Hermes gateway state);
  * - `platform_missing`  — `platform` (e.g. "Telegram"): no state for the profile's platform;
- * - `platform_down`     — `platform`, `state` (gateway's own word, e.g. "retrying");
+ * - `platform_down`     — `platform`, `state` (a {@link PlatformState}, e.g. "disconnected");
  * - `state_db_missing`  — none (the profile has no state.db);
  * - `no_units`          — none (a systemd agent without units);
  * - `unit_failed`       — `unit` (systemd unit name without `.service`);
- * - `unit_down`         — `unit`, `state` (`systemctl is-active` output, e.g. "inactive");
+ * - `unit_down`         — `unit`, `state` (a {@link UnitState}, e.g. "inactive");
  * - `collector_error`   — `error` (exception class name; one broken source).
  * Mirrored by the collector (`ai_office_collector.protocol.REASON_CODES`, checked by a test).
  */
@@ -88,6 +88,35 @@ export const ReasonCode = z.enum([
   'collector_error',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCode>;
+
+/**
+ * Values a reason's `state` param can take. The collector maps anything else to `unknown`, so no
+ * arbitrary word from the server reaches the feed history. Mirrored by the collector
+ * (`PLATFORM_STATES`, `UNIT_STATES`), translated by the web app, both checked by tests.
+ */
+export const PlatformState = z.enum([
+  'connected',
+  'connecting',
+  'disconnected',
+  'error',
+  'stopped',
+  'unknown',
+]);
+export type PlatformState = z.infer<typeof PlatformState>;
+
+/** `systemctl is-active` answers, plus `unknown` for anything else or no answer. */
+export const UnitState = z.enum([
+  'active',
+  'inactive',
+  'failed',
+  'activating',
+  'deactivating',
+  'reloading',
+  'refreshing',
+  'maintenance',
+  'unknown',
+]);
+export type UnitState = z.infer<typeof UnitState>;
 
 /** Longest reason parameter value, in UTF-16 units (zod counts them; so does the collector). */
 export const REASON_PARAM_MAX = 80;

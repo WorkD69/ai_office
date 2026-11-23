@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Literal
 
-from .protocol import REASON_CODES, REASON_PARAM_MAX
+from .protocol import PLATFORM_STATES, REASON_CODES, REASON_PARAM_MAX, UNIT_STATES
 from .sanitize import clean_text
 
 Status = Literal["working", "waiting_you", "waiting_external", "error", "idle", "offline"]
@@ -96,7 +96,8 @@ def hermes_status(
             label = platform.split(":")[-1].capitalize()
             if not state:
                 return Verdict("error", reason=reason("platform_missing", platform=label))
-            return Verdict("error", reason=reason("platform_down", platform=label, state=state))
+            known = state if state in PLATFORM_STATES else "unknown"
+            return Verdict("error", reason=reason("platform_down", platform=label, state=known))
 
     if (
         session is not None
@@ -124,7 +125,8 @@ def systemd_status(states: dict[str, str]) -> Verdict:
     down = [(u, s) for u, s in states.items() if s != "active"]
     if down:
         unit, state = down[0]
-        return Verdict("offline", reason=reason("unit_down", unit=_short(unit), state=state))
+        known = state if state in UNIT_STATES else "unknown"
+        return Verdict("offline", reason=reason("unit_down", unit=_short(unit), state=known))
     return Verdict("idle", None)
 
 

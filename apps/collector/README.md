@@ -59,7 +59,7 @@ Hermes profiles (`source = "hermes"`), first match wins:
 | # | Condition | Status | Activity / reason |
 |---|---|---|---|
 | 1 | `gateway_state.json` missing, not `running`, or `updated_at` older than 180 s | `offline` | reason `gateway_missing` / `gateway_stopped` / `gateway_stale` |
-| 2 | the profile's platform (`telegram` / `<profile>:telegram`) is not `connected` | `error` | reason `platform_down` (`platform`, `state`), or `platform_missing` (`platform`) |
+| 2 | the profile's platform (`telegram` / `<profile>:telegram`) is not `connected` | `error` | reason `platform_down` (`platform`, `state` from `PLATFORM_STATES`, else `unknown`), or `platform_missing` (`platform`) |
 | 3 | *(full mode only)* latest session (ignoring `exclude_sources`) is open and active within 120 s | `working` | activity = `last_activity_description`, else none (session titles are never read) |
 | 4 | otherwise | `idle` | — |
 
@@ -70,7 +70,8 @@ description. A missing `state.db` (full mode) gives `offline` with `state_db_mis
 exception while reading one agent gives `error` with `collector_error` (`error` = class name).
 
 Systemd agents (`source = "systemd"`), worst unit wins: `failed` → `error` (reason `unit_failed`,
-`unit`); anything other than `active` → `offline` (`unit_down`, `unit`, `state`; no units at all →
+`unit`); anything other than `active` → `offline` (`unit_down`, `unit`, `state` from `UNIT_STATES`,
+else `unknown`; no units at all →
 `no_units`); all `active` → `idle`. A live process says nothing about whether it is
 *working*, so bots are never shown as working.
 

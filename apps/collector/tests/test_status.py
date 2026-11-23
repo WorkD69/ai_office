@@ -4,7 +4,12 @@ from datetime import timedelta
 
 import pytest
 
-from ai_office_collector.protocol import REASON_CODES, REASON_PARAM_MAX
+from ai_office_collector.protocol import (
+    PLATFORM_STATES,
+    REASON_CODES,
+    REASON_PARAM_MAX,
+    UNIT_STATES,
+)
 from ai_office_collector.sanitize import utf16_len
 from ai_office_collector.status import (
     GatewayView,
@@ -51,12 +56,21 @@ CASES = [
     ),
     (
         "telegram retrying",
-        GatewayView(True, NOW, {"telegram": "retrying"}),
+        GatewayView(True, NOW, {"telegram": "disconnected"}),
         "telegram",
         session(),
         "error",
         None,
-        Reason("platform_down", {"platform": "Telegram", "state": "retrying"}),
+        Reason("platform_down", {"platform": "Telegram", "state": "disconnected"}),
+    ),
+    (
+        "platform state outside the known set -> unknown, never the raw word",
+        GatewayView(True, NOW, {"telegram": "retrying with token=abc"}),
+        "telegram",
+        session(),
+        "error",
+        None,
+        Reason("platform_down", {"platform": "Telegram", "state": "unknown"}),
     ),
     (
         "profile platform missing",
@@ -141,6 +155,11 @@ def test_working_activity_is_sanitised():
             "offline",
             Reason("unit_down", {"unit": "bot@prod", "state": "activating"}),
         ),
+        (
+            {"bot.service": "Unit bot.service could not be found."},
+            "offline",
+            Reason("unit_down", {"unit": "bot", "state": "unknown"}),
+        ),
         ({}, "offline", Reason("no_units")),
     ],
 )
@@ -156,6 +175,24 @@ def test_every_reason_code_is_in_the_protocol():
         "no_units",
     }
     assert produced <= set(REASON_CODES)
+
+
+def test_every_state_param_is_in_the_protocol():
+    gateway = GatewayView(True, NOW, {"telegram": "connecting"})
+    platform = hermes_status(
+        NOW,
+        gateway,
+        "telegram",
+        None,
+        working_window=timedelta(seconds=120),
+        gateway_stale_after=timedelta(seconds=180),
+    )
+    assert platform.reason is not None
+    assert platform.reason.params["state"] in PLATFORM_STATES
+    for state in (*UNIT_STATES, "something else"):
+        verdict = systemd_status({"bot.service": state})
+        if verdict.reason is not None and "state" in verdict.reason.params:
+            assert verdict.reason.params["state"] in UNIT_STATES
 
 
 def test_reason_params_fit_the_protocol_limit_in_utf16_units():

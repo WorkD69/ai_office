@@ -28,6 +28,23 @@ REASON_CODES = (
     "collector_error",
 )
 
+#: ``PlatformState`` in schema.ts: messaging platform states the collector passes on; any other
+#: value becomes ``unknown`` so no arbitrary word from the server reaches the feed history.
+PLATFORM_STATES = ("connected", "connecting", "disconnected", "error", "stopped", "unknown")
+
+#: ``UnitState`` in schema.ts: ``systemctl is-active`` answers; anything else becomes ``unknown``.
+UNIT_STATES = (
+    "active",
+    "inactive",
+    "failed",
+    "activating",
+    "deactivating",
+    "reloading",
+    "refreshing",
+    "maintenance",
+    "unknown",
+)
+
 #: ``REASON_PARAM_MAX`` in schema.ts: longest reason parameter value, in UTF-16 units.
 REASON_PARAM_MAX = 80
 
