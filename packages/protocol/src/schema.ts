@@ -51,7 +51,8 @@ export type Usage = z.infer<typeof Usage>;
  * Chat links must point at a Telegram username (bots and people alike), optionally with a
  * `start` payload. Nothing else: the web app opens this link on tap. Mirrored by the collector.
  */
-export const CHAT_URL_PATTERN = /^https:\/\/t\.me\/[A-Za-z0-9_]{5,32}(\?start=[A-Za-z0-9_-]{1,64})?$/;
+export const CHAT_URL_PATTERN =
+  /^https:\/\/t\.me\/[A-Za-z0-9_]{5,32}(\?start=[A-Za-z0-9_-]{1,64})?$/;
 
 /** An agent's own number, e.g. "vacancies found this week". */
 export const AgentCounter = z.object({

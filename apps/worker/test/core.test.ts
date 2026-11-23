@@ -241,7 +241,10 @@ describe('OfficeCore', () => {
       ),
     ).toBe(true);
     expect(
-      sameContent(snap([], T0, { quotas: [quota(40, T0)] }), snap([], T0, { quotas: [quota(45, T0)] })),
+      sameContent(
+        snap([], T0, { quotas: [quota(40, T0)] }),
+        snap([], T0, { quotas: [quota(45, T0)] }),
+      ),
     ).toBe(false);
   });
 });
