@@ -79,6 +79,22 @@ Pitfalls:
   together on a version bump.
 - A failed scheduled job is a `cron_failed` item and a `cron_ran` event; it never changes the
   agent's status (pinned by a protocol test).
+- After upgrading the collector, check that `/run/agent-office/snapshot.json` is fresh and has
+  `"v": 2` (see `apps/collector/DEPLOY.md`): the relay silently skips snapshots of another version.
+
+Rollback from v2 to v1 is not a plain redeploy. Once the first v2 feed row (a `code`, no `text`)
+is stored, a v1 web app rejects every `state` message while such a row is among the newest 100
+it receives (`FEED_IN_STATE`); it ignores invalid messages silently, so the office just never
+updates. The stored v2 snapshot is rejected the same way until a v1 collector replaces it, which
+takes seconds. What that means in practice:
+
+- Preferred: roll forward. Fix the bug and redeploy the v2 Worker and collector together.
+- If v1 must come back, roll back the Worker and the collector together, and accept that the
+  live office stays blank until 100 new v1 events have pushed the v2 rows out of the state
+  window. Nothing is deleted for this: the feed table keeps its rows (up to 300, trimmed as usual).
+- A working screen right after a rollback, without deleting history, needs a bridge release on
+  the v1 line: a Worker that leaves rows without `text` out of the `state` message (or a v1 web
+  that accepts coded events). That is a code change, not a switch, and it does not exist yet.
 
 ## Status model
 
@@ -87,14 +103,16 @@ separate from `waiting_external` because the first question the dashboard answer
 "what needs me right now". How each status is derived from Hermes files is documented in
 [`apps/collector/README.md`](../apps/collector/README.md).
 
-## Control (phase 3, not enabled yet)
+## Control (deferred, not planned in v2)
 
-The protocol already defines an allow-listed `Command` type (`agent.task`, `agent.stop`,
-`approval.respond`, `cron.pause|resume|run`). Execution will go through the Hermes API
-server, which today listens on `127.0.0.1:8642` _inside_ the Hermes container. The plan is
-to publish it on the host loopback only (no Tailscale, no public port), keep the API key in
-a root-only file on the VPS, and let the relay execute only allow-listed, expiring,
-single-use commands. See [ADR 0003](adr/0003-control-plane.md).
+Control buttons are not part of office v2 (see [roadmap](roadmap.md): "later"); tasks are given
+to agents in their own Telegram chats, and the office links there. The protocol keeps an unused,
+allow-listed `Command` type (`agent.task`, `agent.stop`, `approval.respond`,
+`cron.pause|resume|run`), and the worker never sends it. If control comes back, these
+constraints from [ADR 0003](adr/0003-control-plane.md) apply: execution goes through the Hermes
+API server (today on `127.0.0.1:8642` _inside_ the Hermes container), published on the host
+loopback only (no Tailscale, no public port), with the API key in a root-only file on the VPS,
+and the relay executes only allow-listed, expiring, single-use commands.
 
 ## Decisions
 
