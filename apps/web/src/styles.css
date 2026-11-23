@@ -946,3 +946,11 @@ span.feed__text {
 .quota__updated {
   margin: 8px 0 0;
 }
+
+.quota__provider {
+  margin: 0 0 6px;
+}
+
+.quota + .quota {
+  margin-top: 12px;
+}

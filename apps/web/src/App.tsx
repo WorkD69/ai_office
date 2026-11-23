@@ -121,7 +121,7 @@ export function App() {
   );
   const widgets = (
     <div className="widgets">
-      <QuotaCard quota={state?.snapshot?.quota ?? null} now={now} />
+      <QuotaCard quotas={state?.snapshot?.quotas ?? []} now={now} />
       <HostCard host={state?.snapshot?.host ?? null} />
     </div>
   );
@@ -152,7 +152,7 @@ export function App() {
             >
               <OfficeCanvas
                 agents={agents}
-                quota={state.snapshot?.quota ?? null}
+                quota={state.snapshot?.quotas[0] ?? null}
                 selectedId={selectedId}
                 onSelect={select}
                 labels={labels}

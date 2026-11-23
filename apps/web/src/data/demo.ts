@@ -376,6 +376,12 @@ export function createDemoOffice(
           lastRunAt: iso(occurrence(now, c.times, -1)),
           lastStatus: c.lastStatus,
         })),
+        // Card fields (description, chat link, own numbers) are filled in with the v2 card.
+        summary: null,
+        chatUrl: null,
+        counters: [],
+        hasPassport: false,
+        project: null,
       };
     });
     const quota: Quota = {
@@ -405,7 +411,7 @@ export function createDemoOffice(
         { name: 'fail2ban', active: true },
       ],
     };
-    return { v: PROTOCOL_VERSION, generatedAt: iso(now), agents, quota, host };
+    return { v: PROTOCOL_VERSION, generatedAt: iso(now), agents, quotas: [quota], host };
   }
 
   function step(now: number): OfficeState {

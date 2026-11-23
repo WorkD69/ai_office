@@ -1,5 +1,6 @@
 import type { Agent, InboxItem } from '@ai-office/protocol';
 import { useI18n } from '../i18n';
+import { inboxText } from '../lib/messages';
 import { RelativeTime } from './common';
 
 interface Props {
@@ -17,7 +18,8 @@ const ICON: Record<InboxItem['kind'], string> = {
 };
 
 export function Inbox({ items, agents, now, onSelect }: Props) {
-  const { t } = useI18n();
+  const tr = useI18n();
+  const { t } = tr;
   const names = new Map(agents.map((a) => [a.id, a.name]));
   return (
     <section className="card card--inbox" aria-labelledby="inbox-title">
@@ -40,7 +42,7 @@ export function Inbox({ items, agents, now, onSelect }: Props) {
                   {ICON[item.kind]}
                 </span>
                 <span className="inbox__body">
-                  <span className="inbox__title">{item.title}</span>
+                  <span className="inbox__title">{inboxText(tr, item)}</span>
                   <span className="inbox__meta">
                     {names.get(item.agentId) ?? item.agentId}
                     {item.since && ' · '}

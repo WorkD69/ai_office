@@ -9,7 +9,7 @@ const NOW = Date.parse('2026-11-19T12:00:00.000Z');
 
 function state(generatedAt: string | null, collectorOnline = true): OfficeState {
   return {
-    snapshot: generatedAt ? { v: 1, generatedAt, agents: [], quota: null, host: null } : null,
+    snapshot: generatedAt ? { v: 2, generatedAt, agents: [], quotas: [], host: null } : null,
     feed: [],
     inbox: [],
     collectorOnline,
