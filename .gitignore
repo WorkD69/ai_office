@@ -17,3 +17,8 @@ __pycache__/
 .DS_Store
 # real deployment config of the collector lives only on the server
 apps/collector/config.toml
+
+# harness: scratch and worktrees
+tmp/
+.worktrees/
+.ruff_cache/
