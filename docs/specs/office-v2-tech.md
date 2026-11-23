@@ -85,7 +85,21 @@ Agent += { summary: string(≤120) | null,      // «ищет стажировк
            chatUrl: 'https://t.me/…' | null,  // только домен t.me
            counters: { label: string(≤40), value: number, period?: 'day'|'week' }[] (≤3),
            hasPassport: boolean,
-           project: string(≤48) | null }
+           project: string(≤48) | null,
+           // причина статуса от коллектора: код + параметры, текст собирает веб (ru/en).
+           // activity остаётся только для собственного текста Hermes (`last_activity_description`).
+           reason: { code: ReasonCode, params: Record<string, string(≤80)> (≤4) } | null }
+
+// ReasonCode (параметры):
+//   gateway_missing | gateway_stopped | gateway_stale   — без параметров (шлюз Hermes)
+//   platform_missing (platform) | platform_down (platform, state)
+//   state_db_missing — нет state.db профиля;  no_units — у бота не указаны службы
+//   unit_failed (unit) | unit_down (unit, state)       — systemd, unit без `.service`
+//   collector_error (error)                            — имя класса исключения
+// Поле необязательное, версия протокола не меняется. Схема принимает любой код вида
+// [a-z][a-z0-9_]* (новый код от коллектора не ломает снимок для старого Worker), веб для
+// незнакомого кода пишет общую фразу. Лента (`status`) и «требует тебя» (`approval`, `error`,
+// `offline`) несут причину в params: `reason` = код плюс параметры причины.
 
 // снимок: квоты — список вместо одного значения
 Snapshot.quota: Quota | null   →   Snapshot.quotas: Quota[] (≤4)

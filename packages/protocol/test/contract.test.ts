@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { Agent, PROTOCOL_VERSION, Snapshot } from '../src/index.js';
+import { Agent, PROTOCOL_VERSION, REASON_PARAM_MAX, ReasonCode, Snapshot } from '../src/index.js';
 
 /**
  * Cross-language contract: golden snapshots produced by the Python collector's tests (from
@@ -36,6 +36,29 @@ describe('collector contract', () => {
     const described = parsed.agents.filter((a) => a.summary !== null && a.chatUrl !== null);
     expect(described.length).toBeGreaterThan(0);
     expect(parsed.quotas.length).toBeGreaterThan(0);
+  });
+});
+
+describe('status reasons from the Python collector', () => {
+  it.each(GOLDEN)('%s sends only reason codes the protocol lists', (name) => {
+    const parsed = Snapshot.parse(golden(name));
+    const reasons = parsed.agents.flatMap((a) => (a.reason ? [a.reason] : []));
+    expect(reasons.length).toBeGreaterThan(0);
+    for (const r of reasons) expect(ReasonCode.options).toContain(r.code);
+  });
+
+  it('keeps the collector text out of activity when it sends a reason', () => {
+    const parsed = Snapshot.parse(golden('snapshot.json'));
+    const failed = parsed.agents.find((a) => a.reason?.code === 'unit_failed');
+    expect(failed).toMatchObject({ status: 'error', activity: null });
+    expect(failed?.reason?.params).toEqual({ unit: 'broker' });
+  });
+
+  it('cuts long reason params exactly at the limit', () => {
+    const parsed = Snapshot.parse(golden('snapshot-max.json'));
+    const down = parsed.agents.find((a) => a.reason?.code === 'unit_down');
+    expect(down?.reason?.params.unit?.length).toBe(REASON_PARAM_MAX);
+    expect(down?.reason?.params.unit?.endsWith('…')).toBe(true);
   });
 });
 

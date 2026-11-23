@@ -31,6 +31,7 @@ function agent(over: Partial<Agent> = {}): Agent {
     counters: [],
     hasPassport: false,
     project: null,
+    reason: null,
     ...over,
   };
 }
@@ -289,6 +290,27 @@ describe('OfficeCore after the protocol v2 upgrade', () => {
       T0 + 2000,
     );
     expect(result.ok && result.newEvents.map((e) => e.code)).toEqual(['status']);
+  });
+
+  it('accepts v2 snapshots with and without the optional status reason', () => {
+    const core = new OfficeCore(new MemoryOfficeStore());
+    // A v2 collector from before status reasons: no `reason` key at all.
+    const { reason: _omitted, ...withoutReason } = agent();
+    const first = core.handleCollectorMessage(snapshotMsg([withoutReason as Agent], T0), T0);
+    expect(first.ok).toBe(true);
+    expect(core.getState(T0).snapshot?.agents[0]?.reason).toBeNull();
+
+    const reason = { code: 'unit_failed', params: { unit: 'broker' } };
+    const result = core.handleCollectorMessage(
+      snapshotMsg([agent({ status: 'error', reason })], T0 + 1000),
+      T0 + 1000,
+    );
+    expect(result.ok && result.newEvents.map((e) => e.params)).toEqual([
+      { name: 'Coordinator', status: 'error', reason: 'unit_failed', unit: 'broker' },
+    ]);
+    expect(core.getState(T0 + 1000).inbox.map((i) => i.params)).toEqual([
+      { name: 'Coordinator', reason: 'unit_failed', unit: 'broker' },
+    ]);
   });
 
   it('starts empty instead of crashing when the stored snapshot is unreadable', () => {

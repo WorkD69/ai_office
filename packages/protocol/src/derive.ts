@@ -41,7 +41,11 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[
       continue;
     }
     if (old.status !== agent.status) {
-      const params: MessageParams = { name: agent.name, status: agent.status };
+      const params: MessageParams = {
+        ...reasonParams(agent),
+        name: agent.name,
+        status: agent.status,
+      };
       if (agent.status === 'working' && agent.activity) params.activity = agent.activity;
       events.push(
         ev(
@@ -105,9 +109,12 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
   if (!snapshot) return [];
   const items: InboxItem[] = [];
   for (const a of snapshot.agents) {
-    const withActivity: MessageParams = a.activity
-      ? { name: a.name, activity: a.activity }
-      : { name: a.name };
+    const reason = reasonParams(a);
+    const withActivity: MessageParams = a.reason
+      ? { ...reason, name: a.name }
+      : a.activity
+        ? { name: a.name, activity: a.activity }
+        : { name: a.name };
     if (a.status === 'waiting_you') {
       items.push({
         id: `${a.id}:approval`,
@@ -132,7 +139,7 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
         id: `${a.id}:offline`,
         agentId: a.id,
         kind: 'offline',
-        params: { name: a.name },
+        params: { ...reason, name: a.name },
         since: a.lastActivityAt,
       });
     }
@@ -149,6 +156,15 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
     }
   }
   return items.sort((x, y) => INBOX_ORDER[x.kind] - INBOX_ORDER[y.kind]);
+}
+
+/**
+ * The agent's reason flattened into message params: `reason` (the code) plus its params. The
+ * caller spreads it first, so its own keys (`name`, `status`) always win over a reason param.
+ */
+function reasonParams(agent: Agent): MessageParams {
+  if (!agent.reason) return {};
+  return { ...agent.reason.params, reason: agent.reason.code };
 }
 
 function ev(

@@ -45,3 +45,11 @@ def test_chat_url_pattern_matches_typescript():
     match = re.search(r"CHAT_URL_PATTERN\s*=\s*/(.+)/;", schema)
     assert match, "CHAT_URL_PATTERN not found in schema.ts"
     assert match.group(1).replace("\\/", "/") == protocol.CHAT_URL_RE.pattern
+
+
+def test_reason_codes_match_typescript():
+    schema = (PROTOCOL_SRC / "schema.ts").read_text(encoding="utf-8")
+    match = re.search(r"ReasonCode\s*=\s*z\.enum\(\[(.*?)\]\)", schema, re.S)
+    assert match, "ReasonCode not found in schema.ts"
+    assert tuple(re.findall(r"'([a-z0-9_]+)'", match.group(1))) == protocol.REASON_CODES
+    assert ts_number(schema, "REASON_PARAM_MAX") == protocol.REASON_PARAM_MAX

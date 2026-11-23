@@ -23,7 +23,8 @@
       "chatUrl": null,
       "counters": [],
       "hasPassport": false,
-      "project": null
+      "project": null,
+      "reason": null
     },
     {
       "id": "hunter",
@@ -65,7 +66,8 @@
       "chatUrl": "https://t.me/example_hunter_bot",
       "counters": [],
       "hasPassport": false,
-      "project": "example-hunter"
+      "project": "example-hunter",
+      "reason": null
     },
     {
       "id": "signals",
@@ -74,7 +76,7 @@
       "room": "trading",
       "kind": "worker",
       "status": "error",
-      "activity": "broker failed",
+      "activity": null,
       "lastActivityAt": null,
       "model": null,
       "usageToday": null,
@@ -83,7 +85,13 @@
       "chatUrl": null,
       "counters": [],
       "hasPassport": false,
-      "project": null
+      "project": null,
+      "reason": {
+        "code": "unit_failed",
+        "params": {
+          "unit": "broker"
+        }
+      }
     }
   ],
   "quotas": [

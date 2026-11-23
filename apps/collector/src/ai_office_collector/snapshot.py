@@ -16,7 +16,7 @@ from .hermes import StateDb, UsageToday, profile_home, read_cron_jobs, read_gate
 from .host import SystemProbe
 from .protocol import MAX_QUOTAS, PROTOCOL_VERSION
 from .sanitize import clean_text
-from .status import GatewayView, SessionView, Verdict, hermes_status, systemd_status
+from .status import GatewayView, SessionView, Verdict, hermes_status, reason, systemd_status
 from .timeutil import iso, local_midnight, parse_ts
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,8 @@ def build_snapshot(config: Config, probe: SystemProbe, now: datetime | None = No
             agents.append(_agent(agent, config, now, midnight, gateway, unit_states))
         except Exception as exc:  # one broken source must not hide the other agents
             log.warning("agent %s: %s", agent.id, type(exc).__name__)
-            agents.append(_base(agent, Verdict("error", f"collector: {type(exc).__name__}")))
+            failure = reason("collector_error", error=type(exc).__name__)
+            agents.append(_base(agent, Verdict("error", reason=failure)))
 
     quota = load_quota(s.quota_file) if s.quota_file else None
     return {
@@ -137,7 +138,7 @@ def _agent(
 
     db = StateDb(home / "state.db", s.work_dir)
     if not db.path.is_file():
-        return _base(agent, Verdict("offline", "profile state.db not found"))
+        return _base(agent, Verdict("offline", reason=reason("state_db_missing")))
 
     try:
         session = db.latest_session(src.exclude_sources)
@@ -182,6 +183,7 @@ def _base(agent: AgentConfig, verdict: Verdict) -> Json:
         "counters": [],
         "hasPassport": False,
         "project": agent.project,
+        "reason": verdict.reason.to_json() if verdict.reason else None,
     }
 
 
