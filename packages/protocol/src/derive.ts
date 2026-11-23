@@ -41,7 +41,11 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[
       continue;
     }
     if (old.status !== agent.status) {
-      const params: MessageParams = { name: agent.name, status: agent.status };
+      const params: MessageParams = {
+        ...reasonParams(agent),
+        name: agent.name,
+        status: agent.status,
+      };
       if (agent.status === 'working' && agent.activity) params.activity = agent.activity;
       events.push(
         ev(
@@ -105,9 +109,12 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
   if (!snapshot) return [];
   const items: InboxItem[] = [];
   for (const a of snapshot.agents) {
-    const withActivity: MessageParams = a.activity
-      ? { name: a.name, activity: a.activity }
-      : { name: a.name };
+    const reason = reasonParams(a);
+    const withActivity: MessageParams = a.reason
+      ? { ...reason, name: a.name }
+      : a.activity
+        ? { name: a.name, activity: a.activity }
+        : { name: a.name };
     if (a.status === 'waiting_you') {
       items.push({
         id: `${a.id}:approval`,
@@ -132,7 +139,7 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
         id: `${a.id}:offline`,
         agentId: a.id,
         kind: 'offline',
-        params: { name: a.name },
+        params: { ...reason, name: a.name },
         since: a.lastActivityAt,
       });
     }
@@ -149,6 +156,31 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
     }
   }
   return items.sort((x, y) => INBOX_ORDER[x.kind] - INBOX_ORDER[y.kind]);
+}
+
+/** Keys feed events and inbox items use themselves; a reason param may never take one over. */
+const MESSAGE_KEYS: ReadonlySet<string> = new Set([
+  'name',
+  'status',
+  'reason',
+  'activity',
+  'job',
+  'outcome',
+  'detail',
+]);
+
+/**
+ * The agent's reason flattened into message params: `reason` (the code) plus its params, minus
+ * any param named like a message key, so a reason can never pose as the agent's activity.
+ */
+function reasonParams(agent: Agent): MessageParams {
+  if (!agent.reason) return {};
+  const params: MessageParams = {};
+  for (const [key, value] of Object.entries(agent.reason.params)) {
+    if (!MESSAGE_KEYS.has(key)) params[key] = value;
+  }
+  params.reason = agent.reason.code;
+  return params;
 }
 
 function ev(

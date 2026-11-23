@@ -62,6 +62,80 @@ export const AgentCounter = z.object({
 });
 export type AgentCounter = z.infer<typeof AgentCounter>;
 
+/**
+ * Why the collector gave an agent its status, as a code the web app translates (i18n). Hermes'
+ * own free text stays in `Agent.activity`; these are the collector's fixed reasons. Params:
+ * - `gateway_missing` / `gateway_stopped` / `gateway_stale` — none (Hermes gateway state);
+ * - `platform_missing`  — `platform` (e.g. "Telegram"): no state for the profile's platform;
+ * - `platform_down`     — `platform`, `state` (a {@link PlatformState}, e.g. "disconnected");
+ * - `state_db_missing`  — none (the profile has no state.db);
+ * - `no_units`          — none (a systemd agent without units);
+ * - `unit_failed`       — `unit` (systemd unit name without `.service`);
+ * - `unit_down`         — `unit`, `state` (a {@link UnitState}, e.g. "inactive");
+ * - `collector_error`   — `error` (exception class name; one broken source).
+ * Mirrored by the collector (`ai_office_collector.protocol.REASON_CODES`, checked by a test).
+ */
+export const ReasonCode = z.enum([
+  'gateway_missing',
+  'gateway_stopped',
+  'gateway_stale',
+  'platform_missing',
+  'platform_down',
+  'state_db_missing',
+  'no_units',
+  'unit_failed',
+  'unit_down',
+  'collector_error',
+]);
+export type ReasonCode = z.infer<typeof ReasonCode>;
+
+/**
+ * Values a reason's `state` param can take. The collector maps anything else to `unknown`, so no
+ * arbitrary word from the server reaches the feed history. Mirrored by the collector
+ * (`PLATFORM_STATES`, `UNIT_STATES`), translated by the web app, both checked by tests.
+ */
+export const PlatformState = z.enum([
+  'connected',
+  'connecting',
+  'disconnected',
+  'error',
+  'stopped',
+  'unknown',
+]);
+export type PlatformState = z.infer<typeof PlatformState>;
+
+/** `systemctl is-active` answers, plus `unknown` for anything else or no answer. */
+export const UnitState = z.enum([
+  'active',
+  'inactive',
+  'failed',
+  'activating',
+  'deactivating',
+  'reloading',
+  'refreshing',
+  'maintenance',
+  'unknown',
+]);
+export type UnitState = z.infer<typeof UnitState>;
+
+/** Longest reason parameter value, in UTF-16 units (zod counts them; so does the collector). */
+export const REASON_PARAM_MAX = 80;
+
+/**
+ * The wire accepts any well-formed code, not only {@link ReasonCode}: the field is additive, so a
+ * collector that learns a new reason must not make the whole snapshot invalid for an older
+ * Worker. The web app shows a generic phrase for codes it does not know.
+ */
+export const AgentReason = z
+  .object({
+    code: z.string().regex(/^[a-z][a-z0-9_]{0,31}$/),
+    params: z
+      .record(z.string().regex(/^[a-z][A-Za-z0-9]{0,15}$/), z.string().max(REASON_PARAM_MAX))
+      .refine((p) => Object.keys(p).length <= 4, { message: 'at most 4 params' }),
+  })
+  .strict();
+export type AgentReason = z.infer<typeof AgentReason>;
+
 export const Agent = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,47}$/),
   name: z.string().min(1).max(40),
@@ -69,7 +143,10 @@ export const Agent = z.object({
   room: z.string().regex(/^[a-z0-9-]{1,32}$/),
   kind: AgentKind,
   status: AgentStatus,
-  /** Short human-readable description of the current/last activity. Never raw message text. */
+  /**
+   * Hermes' own short description of the current activity (e.g. "calling web_search"), shown as
+   * is. Never raw message text. The collector's fixed reasons travel in `reason` instead.
+   */
   activity: z.string().max(160).nullable(),
   lastActivityAt: isoDate.nullable(),
   model: z.string().max(60).nullable(),
@@ -85,6 +162,8 @@ export const Agent = z.object({
   counters: z.array(AgentCounter).max(3).default([]),
   hasPassport: z.boolean().default(false),
   project: z.string().max(48).nullable().default(null),
+  /** Collector's reason for the status (offline/error), see {@link AgentReason}. */
+  reason: AgentReason.nullable().default(null),
 });
 export type Agent = z.infer<typeof Agent>;
 
@@ -131,7 +210,8 @@ export type Snapshot = z.infer<typeof Snapshot>;
  * Feed event codes. The protocol carries a code and parameters; the web app turns them into text
  * in the viewer's language (i18n), so no component has to agree on English wording.
  * - `joined` / `left`  — params `name`;
- * - `status`           — params `name`, `status` (AgentStatus), `activity` only for `working`;
+ * - `status`           — params `name`, `status` (AgentStatus), `activity` only for `working`,
+ *                        and the agent's reason if any: `reason` (code) plus the reason params;
  * - `activity`         — params `name`, `activity` (a working agent moved on to something new);
  * - `cron_ran`         — params `name`, `job`, `outcome` ('ok' | 'failed' | 'finished');
  * - `command`          — params `outcome` ('ok' | 'failed'), `detail` (control results, phase 3).
@@ -175,6 +255,8 @@ export type FeedEvent = z.infer<typeof FeedEvent>;
 /**
  * "Needs you" item. Derived from a snapshot, so it disappears when the cause is resolved.
  * Params by kind: `approval` / `error` — `name`, optional `activity`; `offline` — `name`;
+ * `approval` / `error` / `offline` also carry the agent's reason if any: `reason` (code) plus
+ * the reason params (see {@link AgentReason}), in which case `activity` is left out;
  * `cron_failed` — `name`, `job` (one failed job, the agent itself may be fine).
  */
 export const InboxKind = z.enum(['approval', 'error', 'cron_failed', 'offline']);

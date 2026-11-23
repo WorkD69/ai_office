@@ -3,6 +3,7 @@ import {
   deriveInbox,
   diffSnapshots,
   FeedEvent,
+  REASON_PARAM_MAX,
   Snapshot,
   type Agent,
   type CronJob,
@@ -29,6 +30,7 @@ function agent(over: Partial<Agent> = {}): Agent {
     counters: [],
     hasPassport: false,
     project: null,
+    reason: null,
     ...over,
   };
 }
@@ -62,7 +64,7 @@ describe('Snapshot schema', () => {
 
   it('fills the optional agent fields with empty values when the collector omits them', () => {
     const bare: Record<string, unknown> = { ...agent() };
-    for (const key of ['summary', 'chatUrl', 'counters', 'hasPassport', 'project']) {
+    for (const key of ['summary', 'chatUrl', 'counters', 'hasPassport', 'project', 'reason']) {
       delete bare[key];
     }
     const parsed = Snapshot.parse({ ...snap([]), agents: [bare] });
@@ -72,7 +74,33 @@ describe('Snapshot schema', () => {
       counters: [],
       hasPassport: false,
       project: null,
+      reason: null,
     });
+  });
+
+  it('accepts a status reason as a code with short string params', () => {
+    const reason = { code: 'unit_failed', params: { unit: 'broker' } };
+    const parsed = Snapshot.parse(snap([agent({ status: 'error', reason })]));
+    expect(parsed.agents[0]?.reason).toEqual(reason);
+    // A newer collector may send a code this client does not know yet: still a valid snapshot.
+    const newer = { code: 'some_future_reason', params: {} };
+    expect(Snapshot.safeParse(snap([agent({ reason: newer })])).success).toBe(true);
+  });
+
+  it('limits status reasons: code shape, param names, count and length', () => {
+    const ok = (reason: unknown) =>
+      Snapshot.safeParse(snap([agent({ reason: reason as Agent['reason'] })])).success;
+    expect(ok({ code: 'Unit failed!', params: {} })).toBe(false);
+    expect(ok({ code: 'unit_failed', params: { unit: 'u'.repeat(REASON_PARAM_MAX) } })).toBe(true);
+    expect(ok({ code: 'unit_failed', params: { unit: 'u'.repeat(REASON_PARAM_MAX + 1) } })).toBe(
+      false,
+    );
+    expect(ok({ code: 'unit_failed', params: { unit: 1 } })).toBe(false);
+    expect(ok({ code: 'unit_failed', params: { 'bad key': 'x' } })).toBe(false);
+    expect(ok({ code: 'unit_failed', params: { a: '1', b: '2', c: '3', d: '4', e: '5' } })).toBe(
+      false,
+    );
+    expect(ok({ code: 'unit_failed' })).toBe(false);
   });
 
   it('accepts chat links only on t.me', () => {
@@ -163,6 +191,59 @@ describe('diffSnapshots', () => {
     expect(event?.code).toBe('status');
     expect(event?.params).toEqual({ name: 'Coordinator', status: 'error' });
     expect(event?.level).toBe('error');
+  });
+
+  it('attaches the collector reason code and its params to a status change', () => {
+    const [event] = diffSnapshots(
+      snap([agent()]),
+      snap(
+        [
+          agent({
+            status: 'offline',
+            activity: null,
+            reason: { code: 'unit_down', params: { unit: 'broker', state: 'inactive' } },
+          }),
+        ],
+        T1,
+      ),
+    );
+    expect(event?.params).toEqual({
+      name: 'Coordinator',
+      status: 'offline',
+      reason: 'unit_down',
+      unit: 'broker',
+      state: 'inactive',
+    });
+    expect(FeedEvent.safeParse(event).success).toBe(true);
+  });
+
+  it('never lets reason params pose as message keys (name, status, reason, activity, ...)', () => {
+    const params = {
+      name: 'x',
+      status: 'y',
+      reason: 'z',
+      activity: 'fake activity',
+    };
+    const [event] = diffSnapshots(
+      snap([agent()]),
+      snap([agent({ status: 'error', reason: { code: 'unit_failed', params } })], T1),
+    );
+    expect(event?.params).toEqual({ name: 'Coordinator', status: 'error', reason: 'unit_failed' });
+    const inbox = deriveInbox(
+      snap([
+        agent({ status: 'error', reason: { code: 'unit_failed', params } }),
+        agent({
+          id: 'bot',
+          kind: 'worker',
+          status: 'offline',
+          reason: { code: 'unit_down', params: { job: 'j', outcome: 'o', detail: 'd' } },
+        }),
+      ]),
+    );
+    expect(inbox.map((i) => i.params)).toEqual([
+      { name: 'Coordinator', reason: 'unit_failed' },
+      { name: 'Coordinator', reason: 'unit_down' },
+    ]);
   });
 
   it('reports a new activity of a working agent', () => {
@@ -272,6 +353,30 @@ describe('deriveInbox', () => {
     expect(inbox[0]?.params).toEqual({ name: 'Boss', activity: 'run shell command' });
     expect(inbox[1]?.params).toEqual({ name: 'Broken' });
     expect(inbox[2]?.params).toEqual({ name: 'Bot' });
+  });
+
+  it('names the collector reason of error and offline items as a code with params', () => {
+    const inbox = deriveInbox(
+      snap([
+        agent({
+          id: 'bot',
+          name: 'Bot',
+          kind: 'worker',
+          status: 'error',
+          reason: { code: 'unit_failed', params: { unit: 'bot' } },
+        }),
+        agent({
+          id: 'hermes',
+          name: 'Hermes',
+          status: 'offline',
+          reason: { code: 'gateway_stopped', params: {} },
+        }),
+      ]),
+    );
+    expect(inbox.map((i) => i.params)).toEqual([
+      { name: 'Bot', reason: 'unit_failed', unit: 'bot' },
+      { name: 'Hermes', reason: 'gateway_stopped' },
+    ]);
   });
 
   it('ignores disabled jobs and offline dev agents (a closed laptop is normal)', () => {

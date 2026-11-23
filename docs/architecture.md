@@ -68,7 +68,10 @@ outcome), never ready-made sentences; the web app renders them with i18n (`apps/
 Russian for the owner in live mode, English in the public demo, `?lang=` overrides. Snapshots carry
 `quotas[]` (up to four) and optional agent card fields (`summary`, `chatUrl` limited to
 `https://t.me/<username>`, `counters`, `hasPassport`, `project`); in stage 1 the collector fills
-`summary`, `chatUrl` and `project` from its manual config.
+`summary`, `chatUrl` and `project` from its manual config. The collector's own reason for a status
+(gateway down, unit failed, ...) is the optional `reason` (`ReasonCode` plus short params), and
+`status` feed events and inbox items repeat it in their params (`reason` = code); `activity` is only
+Hermes' own text and is shown untranslated.
 
 Pitfalls:
 
@@ -79,6 +82,11 @@ Pitfalls:
   together on a version bump.
 - A failed scheduled job is a `cron_failed` item and a `cron_ran` event; it never changes the
   agent's status (pinned by a protocol test).
+- `reason` is additive within v2: a snapshot without it parses with `reason: null` (an older v2
+  collector keeps its English text in `activity`, which is shown as is), and the schema accepts
+  reason codes it does not list, so a newer collector never blanks an older Worker.
+  The web app (`reasonText`/`agentDetail` in `apps/web/src/lib/messages.ts`) shows a generic
+  phrase for codes it does not know and `?` for a missing param, never raw `{placeholders}`.
 - After upgrading the collector, check that `/run/agent-office/snapshot.json` is fresh and has
   `"v": 2` (see `apps/collector/DEPLOY.md`): the relay silently skips snapshots of another version.
 

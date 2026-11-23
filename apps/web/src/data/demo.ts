@@ -382,6 +382,8 @@ export function createDemoOffice(
         counters: [],
         hasPassport: false,
         project: null,
+        // Demo lines are free text in English, like Hermes' own activity descriptions.
+        reason: null,
       };
     });
     const quota: Quota = {

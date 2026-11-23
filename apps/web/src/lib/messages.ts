@@ -1,4 +1,4 @@
-import type { FeedEvent, InboxItem, MessageParams } from '@ai-office/protocol';
+import type { Agent, FeedEvent, InboxItem, MessageParams } from '@ai-office/protocol';
 import { isMessageKey, type MessageKey, type Translator } from '../i18n';
 
 /**
@@ -20,6 +20,7 @@ export function feedText(tr: Translator, event: FeedEvent): string {
       const text = tr.t(known(`event.status.${str(p.status)}`, 'event.status.other'), {
         name: str(p.name),
       });
+      if (p.reason !== undefined) return withDetail(tr, text, reasonText(tr, str(p.reason), p));
       return p.activity === undefined ? text : withDetail(tr, text, p.activity);
     }
     case 'activity':
@@ -42,8 +43,50 @@ export function inboxText(tr: Translator, item: InboxItem): string {
   const p: MessageParams = item.params;
   const vars = { name: str(p.name), job: str(p.job) };
   const text = tr.t(`inbox.${item.kind}`, vars);
+  if (p.reason !== undefined && item.kind !== 'cron_failed') {
+    return withDetail(tr, text, reasonText(tr, str(p.reason), p));
+  }
   const hasActivity = item.kind === 'approval' || item.kind === 'error';
   return hasActivity && p.activity !== undefined ? withDetail(tr, text, p.activity) : text;
+}
+
+/** Every param a reason text may use; a missing one shows as "?" rather than `{unit}`. */
+const REASON_VARS = ['platform', 'state', 'unit', 'error'] as const;
+
+/** Reason codes whose `state` param is a known word (PlatformState / UnitState) to translate. */
+const STATE_FAMILY: Readonly<Record<string, 'platform' | 'unit'>> = {
+  platform_down: 'platform',
+  unit_down: 'unit',
+};
+
+/**
+ * Text of the collector's status reason (`Agent.reason`, or `reason` plus params in a feed event
+ * or inbox item). A code this client does not know gives a generic phrase.
+ */
+export function reasonText(
+  tr: Translator,
+  code: string,
+  params: Readonly<Record<string, string | number | undefined>>,
+): string {
+  const key = `reason.${code}`;
+  if (!isMessageKey(key)) return tr.t('reason.unknown');
+  const vars: Record<string, string> = {};
+  for (const name of REASON_VARS) vars[name] = params[name] === undefined ? '?' : str(params[name]);
+  const family = STATE_FAMILY[code];
+  if (family) {
+    // Never the raw word: a state this client does not know reads as "unknown state".
+    vars.state = tr.t(known(`state.${family}.${str(params.state)}`, `state.${family}.unknown`));
+  }
+  return tr.t(key, vars);
+}
+
+/**
+ * The detail line under an agent's status: the collector's reason in the viewer's language, else
+ * Hermes' own activity description as is (not translated), else nothing.
+ */
+export function agentDetail(tr: Translator, agent: Agent): string | null {
+  if (agent.reason) return reasonText(tr, agent.reason.code, agent.reason.params);
+  return agent.activity;
 }
 
 function withDetail(tr: Translator, text: string, detail: string | number): string {

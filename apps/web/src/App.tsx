@@ -4,6 +4,7 @@ import type { DeniedConnection } from './data/live';
 import { useOffice } from './data/useOffice';
 import { roomLabel, useI18n, type MessageKey } from './i18n';
 import { freshness } from './lib/freshness';
+import { agentDetail } from './lib/messages';
 import { formatAge } from './lib/time';
 import { OfficeCanvas } from './office/OfficeCanvas';
 import type { SceneLabels } from './office/renderer';
@@ -82,6 +83,11 @@ export function App() {
     }),
     [tr],
   );
+  // The office scene shows `activity` as the agent's line: give it the translated status reason.
+  const sceneAgents = useMemo(
+    () => agents.map((a) => ({ ...a, activity: agentDetail(tr, a) })),
+    [agents, tr],
+  );
 
   if (connection in DENIED_TEXT) {
     const [title, body] = DENIED_TEXT[connection as DeniedConnection];
@@ -151,7 +157,7 @@ export function App() {
               fallback={<div className="scene__fallback">{t('scene.unavailable')}</div>}
             >
               <OfficeCanvas
-                agents={agents}
+                agents={sceneAgents}
                 quota={state.snapshot?.quotas[0] ?? null}
                 selectedId={selectedId}
                 onSelect={select}

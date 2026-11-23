@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Agent } from '@ai-office/protocol';
 import { roomLabel, useI18n } from '../i18n';
+import { agentDetail } from '../lib/messages';
 import { formatClock, formatCompact } from '../lib/time';
 import { RelativeTime, StatusDot } from './common';
 
@@ -23,6 +24,8 @@ export function AgentDrawer({ agent, now, onClose }: Props) {
   }, [agent.id, onClose]);
 
   const usage = agent.usageToday;
+  // An offline agent's last activity is stale, but the reason it is offline is worth showing.
+  const detail = agent.reason || agent.status !== 'offline' ? agentDetail(tr, agent) : null;
   return (
     <aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="drawer-title">
       <div className="drawer__head">
@@ -42,9 +45,7 @@ export function AgentDrawer({ agent, now, onClose }: Props) {
         </button>
       </div>
 
-      {agent.activity && agent.status !== 'offline' && (
-        <p className="drawer__activity">{agent.activity}</p>
-      )}
+      {detail && <p className="drawer__activity">{detail}</p>}
 
       <dl className="facts">
         <dt>{t('drawer.role')}</dt>

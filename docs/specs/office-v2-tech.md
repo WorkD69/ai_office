@@ -85,7 +85,30 @@ Agent += { summary: string(≤120) | null,      // «ищет стажировк
            chatUrl: 'https://t.me/…' | null,  // только домен t.me
            counters: { label: string(≤40), value: number, period?: 'day'|'week' }[] (≤3),
            hasPassport: boolean,
-           project: string(≤48) | null }
+           project: string(≤48) | null,
+           // причина статуса от коллектора: код + параметры, текст собирает веб (ru/en).
+           // activity остаётся только для собственного текста Hermes (`last_activity_description`).
+           reason: { code: string /^[a-z][a-z0-9_]{0,31}$/,          // известные — ReasonCode
+                     params: Record<key /^[a-z][A-Za-z0-9]{0,15}$/,
+                                    string(≤80 UTF-16 единиц, REASON_PARAM_MAX)> (≤4 ключей)
+                   } | null }   // строгий объект: других полей нет
+
+// ReasonCode (параметры):
+//   gateway_missing | gateway_stopped | gateway_stale   — без параметров (шлюз Hermes)
+//   platform_missing (platform) | platform_down (platform, state)
+//   state_db_missing — нет state.db профиля;  no_units — у бота не указаны службы
+//   unit_failed (unit) | unit_down (unit, state)       — systemd, unit без `.service`
+//   collector_error (error)                            — имя класса исключения
+// state — только из известного набора, всё прочее коллектор превращает в `unknown`:
+//   PlatformState: connected | connecting | disconnected | error | stopped | unknown
+//   UnitState: active | inactive | failed | activating | deactivating | reloading |
+//              refreshing | maintenance | unknown
+// Веб переводит и код, и state; незнакомое значение — общая фраза, не сырое слово.
+// Поле необязательное, версия протокола не меняется. Схема принимает любой код по шаблону выше
+// (новый код от коллектора не ломает снимок для старого Worker), веб для незнакомого кода пишет
+// общую фразу. Лента (`status`) и «требует тебя» (`approval`, `error`, `offline`) несут причину
+// в params: `reason` = код плюс параметры причины; параметр с именем служебного ключа
+// (name, status, reason, activity, job, outcome, detail) отбрасывается.
 
 // снимок: квоты — список вместо одного значения
 Snapshot.quota: Quota | null   →   Snapshot.quotas: Quota[] (≤4)

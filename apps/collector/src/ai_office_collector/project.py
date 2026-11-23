@@ -28,6 +28,7 @@ from typing import Any
 from .config import Config, HermesSource, resolve_timezone
 from .hermes import StateDb, profile_home
 from .host import SystemProbe
+from .protocol import PLATFORM_STATES
 from .sanitize import clean_text
 from .snapshot import write_atomic
 from .status import SessionView
@@ -37,7 +38,6 @@ GATEWAY_CREDENTIAL = "gateway"
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_JOBS = 50
 
-PLATFORM_STATES = frozenset({"connected", "connecting", "disconnected", "error", "stopped"})
 JOB_RESULTS = frozenset({"ok", "success", "error", "failed"})
 SCHEDULE_RE = re.compile(r"[\d\s,*:/+A-Za-z-]{1,80}")
 JOB_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")

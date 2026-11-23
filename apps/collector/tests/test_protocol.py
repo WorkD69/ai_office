@@ -21,6 +21,12 @@ def ts_number(source: str, name: str) -> int:
     return value
 
 
+def ts_enum(source: str, name: str) -> tuple[str, ...]:
+    match = re.search(rf"\b{name}\s*=\s*z\.enum\(\[(.*?)\]\)", source, re.S)
+    assert match, f"{name} not found in schema.ts"
+    return tuple(re.findall(r"'([a-z0-9_]+)'", match.group(1)))
+
+
 def test_constants_match_typescript():
     constants = (PROTOCOL_SRC / "constants.ts").read_text(encoding="utf-8")
     schema = (PROTOCOL_SRC / "schema.ts").read_text(encoding="utf-8")
@@ -45,3 +51,11 @@ def test_chat_url_pattern_matches_typescript():
     match = re.search(r"CHAT_URL_PATTERN\s*=\s*/(.+)/;", schema)
     assert match, "CHAT_URL_PATTERN not found in schema.ts"
     assert match.group(1).replace("\\/", "/") == protocol.CHAT_URL_RE.pattern
+
+
+def test_reason_codes_and_states_match_typescript():
+    schema = (PROTOCOL_SRC / "schema.ts").read_text(encoding="utf-8")
+    assert ts_enum(schema, "ReasonCode") == protocol.REASON_CODES
+    assert ts_enum(schema, "PlatformState") == protocol.PLATFORM_STATES
+    assert ts_enum(schema, "UnitState") == protocol.UNIT_STATES
+    assert ts_number(schema, "REASON_PARAM_MAX") == protocol.REASON_PARAM_MAX

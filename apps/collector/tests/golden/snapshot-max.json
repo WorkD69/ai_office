@@ -23,7 +23,8 @@
       "chatUrl": null,
       "counters": [],
       "hasPassport": false,
-      "project": null
+      "project": null,
+      "reason": null
     },
     {
       "id": "hunter",
@@ -497,7 +498,8 @@
       "chatUrl": "https://t.me/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb?start=ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
       "counters": [],
       "hasPassport": false,
-      "project": "pppppppppppppppppppppppp🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂"
+      "project": "pppppppppppppppppppppppp🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂",
+      "reason": null
     },
     {
       "id": "signals",
@@ -505,7 +507,7 @@
       "role": "Trading signals",
       "room": "trading",
       "kind": "worker",
-      "status": "idle",
+      "status": "offline",
       "activity": null,
       "lastActivityAt": null,
       "model": null,
@@ -515,7 +517,14 @@
       "chatUrl": null,
       "counters": [],
       "hasPassport": false,
-      "project": null
+      "project": null,
+      "reason": {
+        "code": "unit_down",
+        "params": {
+          "unit": "svc.part.svc.part.svc.part.svc.part.svc.part.svc.part.svc.part.svc.part.svc.par…",
+          "state": "deactivating"
+        }
+      }
     }
   ],
   "quotas": [

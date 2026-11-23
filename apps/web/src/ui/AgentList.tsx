@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 import type { Agent } from '@ai-office/protocol';
 import { roomLabel, useI18n } from '../i18n';
+import { agentDetail } from '../lib/messages';
 import { RelativeTime, StatusDot } from './common';
 
 interface Props {
@@ -64,7 +65,7 @@ export function AgentList({ agents, selectedId, now, onSelect }: Props) {
                 <span className="agent__activity">
                   {a.status === 'offline'
                     ? t('status.offline')
-                    : (a.activity ?? t(`status.${a.status}`))}
+                    : (agentDetail(tr, a) ?? t(`status.${a.status}`))}
                 </span>
               </span>
               <span className="agent__time">

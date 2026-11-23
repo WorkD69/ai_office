@@ -43,7 +43,7 @@ that reads Hermes data cannot reach the internet.
 ## What leaves the server
 
 Only the fields of the protocol `Snapshot` (`packages/protocol/src/schema.ts`): agent status, a
-short activity line, timestamps, model name, today's token counters, cron job names/schedules/last
+short activity line, the status reason as a code (unit/platform names and states as params), timestamps, model name, today's token counters, cron job names/schedules/last
 result, host RAM/disk/load, service up/down and quota percentages, plus what the owner wrote in
 the config for each agent (`summary`, `chat_url`, `project`).
 **Never read or sent**: message texts, prompts, session titles, cron job prompts or scripts, chat/user
@@ -56,15 +56,23 @@ secret-, key-, e-mail-, handle-, phone- and id-like strings redacted, length cla
 
 Hermes profiles (`source = "hermes"`), first match wins:
 
-| # | Condition | Status | Activity |
+| # | Condition | Status | Activity / reason |
 |---|---|---|---|
-| 1 | `gateway_state.json` missing, not `running`, or `updated_at` older than 180 s | `offline` | reason |
-| 2 | the profile's platform (`telegram` / `<profile>:telegram`) is not `connected` | `error` | `Telegram gateway: <state>` |
-| 3 | *(full mode only)* latest session (ignoring `exclude_sources`) is open and active within 120 s | `working` | `last_activity_description`, else "In a conversation" (session titles are never read) |
+| 1 | `gateway_state.json` missing, not `running`, or `updated_at` older than 180 s | `offline` | reason `gateway_missing` / `gateway_stopped` / `gateway_stale` |
+| 2 | the profile's platform (`telegram` / `<profile>:telegram`) is not `connected` | `error` | reason `platform_down` (`platform`, `state` from `PLATFORM_STATES`, else `unknown`), or `platform_missing` (`platform`) |
+| 3 | *(full mode only)* latest session (ignoring `exclude_sources`) is open and active within 120 s | `working` | activity = `last_activity_description`, else none (session titles are never read) |
 | 4 | otherwise | `idle` | — |
 
-Systemd agents (`source = "systemd"`), worst unit wins: `failed` → `error`; anything other than
-`active` → `offline`; all `active` → `idle`. A live process says nothing about whether it is
+The collector's own reasons are never sent as text: `Agent.reason` carries a code from
+`ReasonCode` in the protocol schema (mirrored in `protocol.REASON_CODES`) and short params clamped
+to `REASON_PARAM_MAX` UTF-16 units; the web app translates them. `activity` holds only Hermes' own
+description. A missing `state.db` (full mode) gives `offline` with `state_db_missing`; an
+exception while reading one agent gives `error` with `collector_error` (`error` = class name).
+
+Systemd agents (`source = "systemd"`), worst unit wins: `failed` → `error` (reason `unit_failed`,
+`unit`); anything other than `active` → `offline` (`unit_down`, `unit`, `state` from `UNIT_STATES`,
+else `unknown`; no units at all →
+`no_units`); all `active` → `idle`. A live process says nothing about whether it is
 *working*, so bots are never shown as working.
 
 `waiting_you` (approval pending) is **not derived** in this version: Hermes v0.21.6 keeps pending
@@ -101,10 +109,10 @@ Configuration: see [`config.example.toml`](config.example.toml). Deployment: [`D
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest -q                 # synthetic fixtures only, no server data
 .venv/bin/ruff check src tests && .venv/bin/ruff format --check src tests
-UPDATE_GOLDEN=1 .venv/bin/pytest tests/test_snapshot.py   # refresh tests/golden/snapshot.json
+UPDATE_GOLDEN=1 .venv/bin/pytest tests/test_snapshot.py   # refresh tests/golden/*.json
 ```
 
-`tests/golden/snapshot.json` is the cross-language contract: it is also validated against the zod
+`tests/golden/snapshot.json` (and `snapshot-max.json`, every field at its limit) is the cross-language contract: it is also validated against the zod
 schema on the TypeScript side.
 
 The exporter is stdlib-only (runs on the system `python3`). Only the relay needs `websockets`.

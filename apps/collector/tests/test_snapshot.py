@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_office_collector.config import SystemdSource
 from ai_office_collector.snapshot import build_snapshot, load_quota, write_atomic
 from conftest import NOW, FakeProbe, make_config, minutes, ts
 
@@ -110,7 +111,9 @@ def test_snapshot_matches_golden(hermes, tmp_path):
 
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.parent.mkdir(exist_ok=True)
-        GOLDEN.write_text(json.dumps(snap, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        GOLDEN.write_text(
+            json.dumps(snap, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n"
+        )
     assert snap == json.loads(GOLDEN.read_text(encoding="utf-8"))
 
     by_id = {a["id"]: a for a in snap["agents"]}
@@ -119,6 +122,10 @@ def test_snapshot_matches_golden(hermes, tmp_path):
     assert by_id["hunter"]["status"] == "idle"
     assert by_id["hunter"]["cron"][0]["lastStatus"] == "error"
     assert by_id["signals"]["status"] == "error"
+    # The collector's own reasons travel as a code; only Hermes' text stays in `activity`.
+    assert by_id["signals"]["reason"] == {"code": "unit_failed", "params": {"unit": "broker"}}
+    assert by_id["signals"]["activity"] is None
+    assert by_id["coordinator"]["reason"] is None
     assert "never exported" not in json.dumps(snap)
     # Office v2, stage 1: description and chat link from the manual config, no passports yet.
     assert by_id["hunter"]["summary"] == "Looks for internships, once a day"
@@ -135,8 +142,11 @@ def test_one_broken_agent_does_not_hide_the_others(hermes, tmp_path):
     snap = build_snapshot(cfg, FakeProbe(), now=NOW)
     by_id = {a["id"]: a for a in snap["agents"]}
     assert by_id["coordinator"]["status"] == "error"
-    assert by_id["coordinator"]["activity"].startswith("collector: ")
+    assert by_id["coordinator"]["activity"] is None
+    assert by_id["coordinator"]["reason"]["code"] == "collector_error"
+    assert by_id["coordinator"]["reason"]["params"]["error"]  # exception class name only
     assert by_id["hunter"]["status"] == "offline"  # its state.db does not exist
+    assert by_id["hunter"]["reason"] == {"code": "state_db_missing", "params": {}}
     assert by_id["signals"]["status"] == "idle"
 
 
@@ -146,6 +156,7 @@ def test_gateway_down_marks_hermes_agents_offline(hermes, tmp_path):
     cfg = make_config(hermes.home, tmp_path)
     snap = build_snapshot(cfg, FakeProbe(), now=NOW)
     assert snap["agents"][0]["status"] == "offline"
+    assert snap["agents"][0]["reason"] == {"code": "gateway_stopped", "params": {}}
 
 
 @pytest.mark.parametrize(
@@ -245,11 +256,14 @@ def test_worst_case_lengths_stay_within_schema_limits(hermes, tmp_path):
         chat_url="https://t.me/" + "b" * 32 + "?start=" + "s" * 64,
         project="p" * 24 + "\U0001f642" * 12,
     )
-    cfg = replace(cfg, agents=(cfg.agents[0], longest, *cfg.agents[2:]))
-    snap = build_snapshot(cfg, FakeProbe({}), now=NOW)
+    # A unit name longer than a reason param may be (80 UTF-16 units): cut with an ellipsis.
+    long_unit = "svc.part." * 13 + ".service"
+    bot = replace(cfg.agents[2], source=SystemdSource((long_unit,)))
+    cfg = replace(cfg, agents=(cfg.agents[0], longest, bot, *cfg.agents[3:]))
+    snap = build_snapshot(cfg, FakeProbe({long_unit: "deactivating"}), now=NOW)
 
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN_MAX.write_text(
-            json.dumps(snap, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            json.dumps(snap, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n"
         )
     assert snap == json.loads(GOLDEN_MAX.read_text(encoding="utf-8"))
