@@ -1,13 +1,12 @@
-import type { Agent, AgentStatus, FeedEvent, InboxItem, Snapshot } from './schema.js';
-
-const STATUS_TEXT: Record<AgentStatus, string> = {
-  working: 'started working',
-  waiting_you: 'is waiting for you',
-  waiting_external: 'is waiting on an external service',
-  error: 'hit an error',
-  idle: 'is idle',
-  offline: 'went offline',
-};
+import type {
+  Agent,
+  AgentStatus,
+  FeedCode,
+  FeedEvent,
+  InboxItem,
+  MessageParams,
+  Snapshot,
+} from './schema.js';
 
 const STATUS_LEVEL: Record<AgentStatus, FeedEvent['level']> = {
   working: 'info',
@@ -19,9 +18,12 @@ const STATUS_LEVEL: Record<AgentStatus, FeedEvent['level']> = {
 };
 
 /**
- * Turns two consecutive snapshots into human-readable feed events.
- * Pure and deterministic: event ids are derived from inputs, so a replayed
+ * Turns two consecutive snapshots into feed events (a code plus parameters; the web app
+ * renders the text). Pure and deterministic: event ids are derived from inputs, so a replayed
  * snapshot never duplicates feed entries.
+ *
+ * A failed scheduled job yields a `cron_ran` event with `outcome: 'failed'` and nothing else:
+ * the agent's status is the collector's verdict about the agent, not about one of its jobs.
  */
 export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[] {
   const events: FeedEvent[] = [];
@@ -33,25 +35,30 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[
     if (!old) {
       if (prev) {
         events.push(
-          ev(`${agent.id}:joined:${at}`, at, agent.id, 'info', `${agent.name} joined the office`),
+          ev(`${agent.id}:joined:${at}`, at, agent.id, 'info', 'joined', { name: agent.name }),
         );
       }
       continue;
     }
     if (old.status !== agent.status) {
-      const suffix = agent.status === 'working' && agent.activity ? `: ${agent.activity}` : '';
+      const params: MessageParams = { name: agent.name, status: agent.status };
+      if (agent.status === 'working' && agent.activity) params.activity = agent.activity;
       events.push(
         ev(
           `${agent.id}:status:${agent.status}:${at}`,
           at,
           agent.id,
           STATUS_LEVEL[agent.status],
-          `${agent.name} ${STATUS_TEXT[agent.status]}${suffix}`,
+          'status',
+          params,
         ),
       );
     } else if (agent.status === 'working' && agent.activity && agent.activity !== old.activity) {
       events.push(
-        ev(`${agent.id}:activity:${at}`, at, agent.id, 'info', `${agent.name}: ${agent.activity}`),
+        ev(`${agent.id}:activity:${at}`, at, agent.id, 'info', 'activity', {
+          name: agent.name,
+          activity: agent.activity,
+        }),
       );
     }
 
@@ -67,7 +74,8 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[
             at,
             agent.id,
             failed ? 'error' : 'info',
-            `${agent.name} ran scheduled job "${job.name}": ${outcome}`,
+            'cron_ran',
+            { name: agent.name, job: job.name, outcome },
           ),
         );
       }
@@ -78,11 +86,11 @@ export function diffSnapshots(prev: Snapshot | null, next: Snapshot): FeedEvent[
     const nowIds = new Set(next.agents.map((a) => a.id));
     for (const old of prev.agents) {
       if (!nowIds.has(old.id)) {
-        events.push(ev(`${old.id}:left:${at}`, at, old.id, 'warn', `${old.name} left the office`));
+        events.push(ev(`${old.id}:left:${at}`, at, old.id, 'warn', 'left', { name: old.name }));
       }
     }
   }
-  return events.map(clampText);
+  return events;
 }
 
 const INBOX_ORDER: Record<InboxItem['kind'], number> = {
@@ -97,12 +105,15 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
   if (!snapshot) return [];
   const items: InboxItem[] = [];
   for (const a of snapshot.agents) {
+    const withActivity: MessageParams = a.activity
+      ? { name: a.name, activity: a.activity }
+      : { name: a.name };
     if (a.status === 'waiting_you') {
       items.push({
         id: `${a.id}:approval`,
         agentId: a.id,
         kind: 'approval',
-        title: `${a.name} is waiting for your decision${a.activity ? `: ${a.activity}` : ''}`,
+        params: withActivity,
         since: a.lastActivityAt,
       });
     }
@@ -111,7 +122,7 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
         id: `${a.id}:error`,
         agentId: a.id,
         kind: 'error',
-        title: `${a.name} is in an error state${a.activity ? `: ${a.activity}` : ''}`,
+        params: withActivity,
         since: a.lastActivityAt,
       });
     }
@@ -121,7 +132,7 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
         id: `${a.id}:offline`,
         agentId: a.id,
         kind: 'offline',
-        title: `${a.name} is offline`,
+        params: { name: a.name },
         since: a.lastActivityAt,
       });
     }
@@ -131,15 +142,13 @@ export function deriveInbox(snapshot: Snapshot | null): InboxItem[] {
           id: `${a.id}:cron:${j.id}`,
           agentId: a.id,
           kind: 'cron_failed',
-          title: `${a.name}: scheduled job "${j.name}" failed on its last run`,
+          params: { name: a.name, job: j.name },
           since: j.lastRunAt,
         });
       }
     }
   }
-  return items
-    .map((i) => ({ ...i, title: i.title.slice(0, 160) }))
-    .sort((x, y) => INBOX_ORDER[x.kind] - INBOX_ORDER[y.kind]);
+  return items.sort((x, y) => INBOX_ORDER[x.kind] - INBOX_ORDER[y.kind]);
 }
 
 function ev(
@@ -147,11 +156,8 @@ function ev(
   at: string,
   agentId: string | null,
   level: FeedEvent['level'],
-  text: string,
+  code: FeedCode,
+  params: MessageParams,
 ): FeedEvent {
-  return { id: id.slice(0, 80), at, agentId, level, text };
-}
-
-function clampText(e: FeedEvent): FeedEvent {
-  return e.text.length > 240 ? { ...e, text: `${e.text.slice(0, 239)}…` } : e;
+  return { id: id.slice(0, 80), at, agentId, level, code, params };
 }

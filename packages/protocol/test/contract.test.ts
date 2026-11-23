@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { Snapshot } from '../src/index.js';
+import { Agent, PROTOCOL_VERSION, Snapshot } from '../src/index.js';
 
 /**
  * Cross-language contract: golden snapshots produced by the Python collector's tests (from
@@ -10,13 +10,53 @@ import { Snapshot } from '../src/index.js';
  */
 const GOLDEN = ['snapshot.json', 'snapshot-max.json'];
 
+function golden(name: string): unknown {
+  const path = fileURLToPath(
+    new URL(`../../../apps/collector/tests/golden/${name}`, import.meta.url),
+  );
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
 describe('collector contract', () => {
   it.each(GOLDEN)('%s from the Python collector matches the zod schema', (name) => {
-    const path = fileURLToPath(
-      new URL(`../../../apps/collector/tests/golden/${name}`, import.meta.url),
-    );
-    const parsed = Snapshot.safeParse(JSON.parse(readFileSync(path, 'utf8')));
+    const parsed = Snapshot.safeParse(golden(name));
     if (!parsed.success) throw new Error(`${name}: ${parsed.error.message}`);
+    expect(parsed.data.v).toBe(PROTOCOL_VERSION);
     expect(parsed.data.agents.length).toBeGreaterThan(0);
+  });
+
+  it.each(GOLDEN)('%s spells out every agent field (no reliance on schema defaults)', (name) => {
+    const raw = golden(name) as { agents: Record<string, unknown>[] };
+    const fields = Object.keys(Agent.shape).sort();
+    for (const agent of raw.agents) expect(Object.keys(agent).sort()).toEqual(fields);
+  });
+
+  it('carries the manual-config description and chat link through to the snapshot', () => {
+    const parsed = Snapshot.parse(golden('snapshot.json'));
+    const described = parsed.agents.filter((a) => a.summary !== null && a.chatUrl !== null);
+    expect(described.length).toBeGreaterThan(0);
+    expect(parsed.quotas.length).toBeGreaterThan(0);
+  });
+});
+
+describe('chat link cases shared with the Python collector', () => {
+  const path = fileURLToPath(new URL('./fixtures/chat-urls.json', import.meta.url));
+  const cases = JSON.parse(readFileSync(path, 'utf8')) as { valid: string[]; invalid: string[] };
+
+  it.each(cases.valid)('accepts %j', (url) => {
+    expect(Agent.shape.chatUrl.safeParse(url).success).toBe(true);
+  });
+
+  it.each(cases.invalid)('rejects %j', (url) => {
+    expect(Agent.shape.chatUrl.safeParse(url).success).toBe(false);
+  });
+});
+
+describe('collector length limits count UTF-16 units like zod', () => {
+  it('snapshot-max.json carries emoji text exactly at the limits', () => {
+    const parsed = Snapshot.parse(golden('snapshot-max.json'));
+    const emoji = parsed.agents.find((a) => a.summary?.includes('\u{1F642}'));
+    expect(emoji?.summary?.length).toBe(120);
+    expect(emoji?.project?.length).toBe(48);
   });
 });

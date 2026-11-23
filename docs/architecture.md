@@ -61,6 +61,41 @@ the real deployment:
 4. The **web app** authenticates with Telegram Mini App `initData`, opens a WebSocket and
    renders. Outside Telegram it runs a seeded, synthetic demo instead (no real data is public).
 
+## Protocol v2: codes, not text
+
+Feed events and "needs you" items carry a `code` and `params` (agent name, status, job name,
+outcome), never ready-made sentences; the web app renders them with i18n (`apps/web/src/lib/messages.ts`):
+Russian for the owner in live mode, English in the public demo, `?lang=` overrides. Snapshots carry
+`quotas[]` (up to four) and optional agent card fields (`summary`, `chatUrl` limited to
+`https://t.me/<username>`, `counters`, `hasPassport`, `project`); in stage 1 the collector fills
+`summary`, `chatUrl` and `project` from its manual config.
+
+Pitfalls:
+
+- The Durable Object outlives deployments. Feed events stored by protocol v1 only have English
+  `text`; the schema still accepts them and the web app shows `text` when there is no `code`.
+  A v1 snapshot in storage is upgraded on load (`restoreSnapshot` in `apps/worker/src/core.ts`).
+- The Worker accepts exactly one protocol version, so the Worker and the collector are deployed
+  together on a version bump.
+- A failed scheduled job is a `cron_failed` item and a `cron_ran` event; it never changes the
+  agent's status (pinned by a protocol test).
+- After upgrading the collector, check that `/run/agent-office/snapshot.json` is fresh and has
+  `"v": 2` (see `apps/collector/DEPLOY.md`): the relay silently skips snapshots of another version.
+
+Rollback from v2 to v1 is not a plain redeploy. Once the first v2 feed row (a `code`, no `text`)
+is stored, a v1 web app rejects every `state` message while such a row is among the newest 100
+it receives (`FEED_IN_STATE`); it ignores invalid messages silently, so the office just never
+updates. The stored v2 snapshot is rejected the same way until a v1 collector replaces it, which
+takes seconds. What that means in practice:
+
+- Preferred: roll forward. Fix the bug and redeploy the v2 Worker and collector together.
+- If v1 must come back, roll back the Worker and the collector together, and accept that the
+  live office stays blank until 100 new v1 events have pushed the v2 rows out of the state
+  window. Nothing is deleted for this: the feed table keeps its rows (up to 300, trimmed as usual).
+- A working screen right after a rollback, without deleting history, needs a bridge release on
+  the v1 line: a Worker that leaves rows without `text` out of the `state` message (or a v1 web
+  that accepts coded events). That is a code change, not a switch, and it does not exist yet.
+
 ## Status model
 
 `working · waiting_you · waiting_external · error · idle · offline` — `waiting_you` is
@@ -68,14 +103,16 @@ separate from `waiting_external` because the first question the dashboard answer
 "what needs me right now". How each status is derived from Hermes files is documented in
 [`apps/collector/README.md`](../apps/collector/README.md).
 
-## Control (phase 3, not enabled yet)
+## Control (deferred, not planned in v2)
 
-The protocol already defines an allow-listed `Command` type (`agent.task`, `agent.stop`,
-`approval.respond`, `cron.pause|resume|run`). Execution will go through the Hermes API
-server, which today listens on `127.0.0.1:8642` _inside_ the Hermes container. The plan is
-to publish it on the host loopback only (no Tailscale, no public port), keep the API key in
-a root-only file on the VPS, and let the relay execute only allow-listed, expiring,
-single-use commands. See [ADR 0003](adr/0003-control-plane.md).
+Control buttons are not part of office v2 (see [roadmap](roadmap.md): "later"); tasks are given
+to agents in their own Telegram chats, and the office links there. The protocol keeps an unused,
+allow-listed `Command` type (`agent.task`, `agent.stop`, `approval.respond`,
+`cron.pause|resume|run`), and the worker never sends it. If control comes back, these
+constraints from [ADR 0003](adr/0003-control-plane.md) apply: execution goes through the Hermes
+API server (today on `127.0.0.1:8642` _inside_ the Hermes container), published on the host
+loopback only (no Tailscale, no public port), with the API key in a root-only file on the VPS,
+and the relay executes only allow-listed, expiring, single-use commands.
 
 ## Decisions
 

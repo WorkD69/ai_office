@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ai_office_collector.sanitize import clean_text, slug
+from ai_office_collector.sanitize import clean_text, slug, utf16_len
 
 
 @pytest.mark.parametrize(
@@ -40,3 +40,11 @@ def test_clean_text_truncates_with_ellipsis():
 )
 def test_slug(raw, expected):
     assert slug(raw) == expected
+
+
+def test_clean_text_clamps_in_utf16_units_like_zod():
+    emoji = "🙂"
+    out = clean_text(emoji * 100, 11)
+    assert out == emoji * 5 + "…"
+    assert utf16_len(out) == 11
+    assert clean_text(emoji * 5, 10) == emoji * 5

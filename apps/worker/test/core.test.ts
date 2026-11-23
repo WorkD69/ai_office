@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   COLLECTOR_ONLINE_WINDOW_MS,
   MAX_COLLECTOR_MESSAGE_BYTES,
+  OfficeState,
   type Agent,
   type Host,
   type Quota,
@@ -25,16 +26,21 @@ function agent(over: Partial<Agent> = {}): Agent {
     model: null,
     usageToday: null,
     cron: [],
+    summary: null,
+    chatUrl: null,
+    counters: [],
+    hasPassport: false,
+    project: null,
     ...over,
   };
 }
 
 function snap(agents: Agent[], atMs: number, extra: Partial<Snapshot> = {}): Snapshot {
   return {
-    v: 1,
+    v: 2,
     generatedAt: new Date(atMs).toISOString(),
     agents,
-    quota: null,
+    quotas: [],
     host: null,
     ...extra,
   };
@@ -72,14 +78,16 @@ describe('OfficeCore', () => {
       T0 + 5000,
     );
     expect(result).toMatchObject({ ok: true, stateChanged: true });
-    expect(result.ok && result.newEvents.map((e) => e.text)).toEqual([
-      'Coordinator is waiting for you',
+    expect(result.ok && result.newEvents.map((e) => [e.code, e.params])).toEqual([
+      ['status', { name: 'Coordinator', status: 'waiting_you' }],
     ]);
 
     const state = core.getState(T0 + 6000);
     expect(state.collectorOnline).toBe(true);
     expect(state.snapshot?.agents[0]?.status).toBe('waiting_you');
-    expect(state.inbox.map((i) => i.kind)).toEqual(['approval']);
+    expect(state.inbox.map((i) => [i.kind, i.params])).toEqual([
+      ['approval', { name: 'Coordinator', activity: 'approve shell command' }],
+    ]);
     expect(state.feed).toHaveLength(1);
   });
 
@@ -93,9 +101,8 @@ describe('OfficeCore', () => {
     const revived = new OfficeCore(store);
     revived.handleCollectorMessage(snapshotMsg([agent()], T0), T0 + 2000);
     revived.handleCollectorMessage(changed, T0 + 3000);
-    expect(revived.getState(T0 + 3000).feed.filter((e) => e.text.includes('error'))).toHaveLength(
-      1,
-    );
+    const errors = revived.getState(T0 + 3000).feed.filter((e) => e.params?.status === 'error');
+    expect(errors).toHaveLength(1);
   });
 
   it('throttles storage writes for unchanged snapshots', () => {
@@ -138,6 +145,12 @@ describe('OfficeCore', () => {
     expect(
       core.handleCollectorMessage(JSON.stringify({ type: 'snapshot', snapshot: { v: 2 } }), T0),
     ).toMatchObject({ ok: false, error: 'invalid' });
+    expect(
+      core.handleCollectorMessage(
+        JSON.stringify({ type: 'snapshot', snapshot: { ...snap([], T0), v: 1 } }),
+        T0,
+      ),
+    ).toMatchObject({ ok: false, error: 'invalid' });
     expect(core.getState(T0)).toMatchObject({ snapshot: null, collectorOnline: false, feed: [] });
   });
 
@@ -170,7 +183,12 @@ describe('OfficeCore', () => {
       }),
       T0,
     );
-    expect(result.ok && result.newEvents[0]?.text).toBe('Command failed: cron job not found');
+    expect(result.ok && result.newEvents[0]).toMatchObject({
+      level: 'error',
+      code: 'command',
+      params: { outcome: 'failed', detail: 'cron job not found' },
+    });
+    expect(result.ok && result.newEvents[0]?.text).toBeUndefined();
   });
 
   it('reports schema paths, never values, for invalid snapshots', () => {
@@ -191,13 +209,13 @@ describe('OfficeCore', () => {
     const store = new MemoryOfficeStore();
     const core = new OfficeCore(store);
     core.handleCollectorMessage(
-      snapshotMsg([agent()], T0, { host: host(), quota: quota(40, T0) }),
+      snapshotMsg([agent()], T0, { host: host(), quotas: [quota(40, T0)] }),
       T0,
     );
     const noisy = core.handleCollectorMessage(
       snapshotMsg([agent()], T0 + 5000, {
         host: host({ memUsedMb: 1100, load1: 0.1, diskUsedPercent: 73.4 }),
-        quota: quota(40, T0 + 5000),
+        quotas: [quota(40, T0 + 5000)],
       }),
       T0 + 5000,
     );
@@ -207,7 +225,7 @@ describe('OfficeCore', () => {
     const real = core.handleCollectorMessage(
       snapshotMsg([agent()], T0 + 10_000, {
         host: host({ memUsedMb: 1300 }),
-        quota: quota(41, T0 + 10_000),
+        quotas: [quota(41, T0 + 10_000)],
       }),
       T0 + 10_000,
     );
@@ -218,13 +236,82 @@ describe('OfficeCore', () => {
   it('treats a quota percentage change as real content', () => {
     expect(
       sameContent(
-        snap([], T0, { quota: quota(40, T0) }),
-        snap([], T0 + 1, { quota: quota(40, T0 + 1) }),
+        snap([], T0, { quotas: [quota(40, T0)] }),
+        snap([], T0 + 1, { quotas: [quota(40, T0 + 1)] }),
       ),
     ).toBe(true);
     expect(
-      sameContent(snap([], T0, { quota: quota(40, T0) }), snap([], T0, { quota: quota(45, T0) })),
+      sameContent(
+        snap([], T0, { quotas: [quota(40, T0)] }),
+        snap([], T0, { quotas: [quota(45, T0)] }),
+      ),
     ).toBe(false);
+  });
+});
+
+describe('OfficeCore after the protocol v2 upgrade', () => {
+  /** A snapshot exactly as protocol v1 stored it in the Durable Object. */
+  const v1Snapshot = {
+    v: 1,
+    generatedAt: new Date(T0).toISOString(),
+    agents: [
+      {
+        id: 'coordinator',
+        name: 'Coordinator',
+        role: 'Main assistant',
+        room: 'hq',
+        kind: 'llm',
+        status: 'idle',
+        activity: null,
+        lastActivityAt: null,
+        model: null,
+        usageToday: null,
+        cron: [],
+      },
+    ],
+    quota: quota(40, T0),
+    host: null,
+  };
+
+  it('restores a snapshot stored by protocol v1 as a v2 snapshot', () => {
+    const store = new MemoryOfficeStore({
+      snapshot: { snapshot: v1Snapshot, savedAtMs: T0, collectorLastSeenMs: T0 },
+    });
+    const core = new OfficeCore(store);
+    const state = core.getState(T0 + 1000);
+    expect(OfficeState.safeParse(state).success).toBe(true);
+    expect(state.snapshot).toMatchObject({ v: 2, quotas: [quota(40, T0)] });
+    expect(state.snapshot?.agents[0]).toMatchObject({ summary: null, hasPassport: false });
+
+    // The first v2 snapshot is diffed against the restored one, so no event is lost.
+    const result = core.handleCollectorMessage(
+      snapshotMsg([agent({ status: 'error' })], T0 + 2000),
+      T0 + 2000,
+    );
+    expect(result.ok && result.newEvents.map((e) => e.code)).toEqual(['status']);
+  });
+
+  it('starts empty instead of crashing when the stored snapshot is unreadable', () => {
+    const store = new MemoryOfficeStore({
+      snapshot: { snapshot: { v: 1, agents: 'garbage' }, savedAtMs: T0, collectorLastSeenMs: T0 },
+    });
+    expect(new OfficeCore(store).getState(T0).snapshot).toBeNull();
+  });
+
+  it('keeps showing feed events stored with ready-made text', () => {
+    const legacy = {
+      id: 'coordinator:status:error:2026-11-19T09:00:00.000Z',
+      at: '2026-11-19T09:00:00.000Z',
+      agentId: 'coordinator',
+      level: 'error' as const,
+      text: 'Coordinator hit an error',
+    };
+    const core = new OfficeCore(new MemoryOfficeStore({ feed: [legacy] }));
+    core.handleCollectorMessage(snapshotMsg([agent()], T0), T0);
+    core.handleCollectorMessage(snapshotMsg([agent({ status: 'working' })], T0 + 1000), T0 + 1000);
+    const state = core.getState(T0 + 1000);
+    expect(state.feed.map((e) => e.code ?? e.text)).toEqual(['status', 'Coordinator hit an error']);
+    expect(OfficeState.safeParse(state).success).toBe(true);
   });
 });
 

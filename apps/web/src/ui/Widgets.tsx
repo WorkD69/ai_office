@@ -1,18 +1,31 @@
 import type { FeedEvent, Host, Quota } from '@ai-office/protocol';
 import { useI18n } from '../i18n';
 import { sortFeed } from '../lib/feed';
+import { feedText } from '../lib/messages';
 import { formatRelative } from '../lib/time';
 import { Meter, RelativeTime } from './common';
 
-export function QuotaCard({ quota, now }: { quota: Quota | null; now: number }) {
-  const { t, lang } = useI18n();
+export function QuotaCard({ quotas, now }: { quotas: readonly Quota[]; now: number }) {
+  const { t } = useI18n();
   return (
     <section className="card card--compact" aria-labelledby="quota-title">
-      <h2 id="quota-title">
-        {t('quota.title')}
-        {quota && <span className="card__hint">{quota.provider}</span>}
-      </h2>
-      {!quota || quota.windows.length === 0 ? (
+      <h2 id="quota-title">{t('quota.title')}</h2>
+      {quotas.length === 0 ? (
+        <p className="empty">{t('quota.none')}</p>
+      ) : (
+        // Providers may repeat (the schema allows it), so the index keeps keys unique.
+        quotas.map((q, i) => <QuotaBlock key={`${i}:${q.provider}`} quota={q} now={now} />)
+      )}
+    </section>
+  );
+}
+
+function QuotaBlock({ quota, now }: { quota: Quota; now: number }) {
+  const { t, lang } = useI18n();
+  return (
+    <div className="quota">
+      <p className="card__hint quota__provider">{quota.provider}</p>
+      {quota.windows.length === 0 ? (
         <p className="empty">{t('quota.none')}</p>
       ) : (
         <ul className="bars">
@@ -34,14 +47,12 @@ export function QuotaCard({ quota, now }: { quota: Quota | null; now: number }) 
           ))}
         </ul>
       )}
-      {quota && (
-        <p className="bars__hint quota__updated">
-          {t('quota.updated', {
-            time: formatRelative(quota.observedAt, now, lang, t('time.justNow')) ?? '',
-          })}
-        </p>
-      )}
-    </section>
+      <p className="bars__hint quota__updated">
+        {t('quota.updated', {
+          time: formatRelative(quota.observedAt, now, lang, t('time.justNow')) ?? '',
+        })}
+      </p>
+    </div>
   );
 }
 
@@ -102,7 +113,8 @@ export function Feed({
   now: number;
   onSelect: (id: string) => void;
 }) {
-  const { t } = useI18n();
+  const tr = useI18n();
+  const { t } = tr;
   const sorted = sortFeed(events);
   return (
     <section className="card" aria-labelledby="feed-title">
@@ -119,10 +131,10 @@ export function Feed({
                   className="feed__text"
                   onClick={() => onSelect(e.agentId as string)}
                 >
-                  {e.text}
+                  {feedText(tr, e)}
                 </button>
               ) : (
-                <span className="feed__text">{e.text}</span>
+                <span className="feed__text">{feedText(tr, e)}</span>
               )}
               <span className="feed__time">
                 <RelativeTime iso={e.at} now={now} />

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,17 @@ from ai_office_collector.config import (
 )
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "config.example.toml"
+#: Chat link cases shared with the zod schema tests (packages/protocol).
+CHAT_URLS = json.loads(
+    (
+        Path(__file__).resolve().parents[3]
+        / "packages"
+        / "protocol"
+        / "test"
+        / "fixtures"
+        / "chat-urls.json"
+    ).read_text(encoding="utf-8")
+)
 
 
 def base(**agent):
@@ -29,6 +41,7 @@ def test_example_config_is_valid():
     assert coord.platform == "telegram" and coord.exclude_sources == ("tool",)
     scout = cfg.agents[1].source
     assert isinstance(scout, HermesSource) and scout.platform == "scout:telegram"
+    assert cfg.agents[1].chat_url == "https://t.me/example_scout_bot"
     assert "trading-signals.service" in cfg.all_units()
     assert len(cfg.all_units()) == len(set(cfg.all_units()))
 
@@ -54,6 +67,12 @@ def test_defaults():
         (base(units=[]), "units must be a non-empty list"),
         (base(units=["x; rm -rf /"]), "invalid systemd unit name"),
         (base(source="hermes", profile="../etc"), "profile has invalid characters"),
+        (base(summary="x" * 121), "summary is longer than 120"),
+        (base(summary=5), "summary must be a string"),
+        (base(project="p" * 49), "project is longer than 48"),
+        (base(chat_url="https://example.com/some_bot"), "chat_url must be https://t.me/"),
+        (base(chat_url="http://t.me/example_bot"), "chat_url must be https://t.me/"),
+        (base(chat_url="https://t.me.evil.example/x_bot"), "chat_url must be https://t.me/"),
         (
             {"collector": {"hermes_home": "/d", "interval_seconds": 0}, "agents": [{}]},
             "interval_seconds must be a positive number",
@@ -64,6 +83,25 @@ def test_config_errors(raw, message):
     with pytest.raises(ConfigError, match=None) as exc:
         parse_config(raw)
     assert message in str(exc.value)
+
+
+def test_description_and_chat_link_come_from_the_manual_config():
+    cfg = parse_config(
+        base(
+            summary="  Finds internships,\n once a day ",
+            chat_url="https://t.me/example_hunter_bot",
+            project="example-project",
+        )
+    )
+    agent = cfg.agents[0]
+    assert agent.summary == "Finds internships, once a day"
+    assert agent.chat_url == "https://t.me/example_hunter_bot"
+    assert agent.project == "example-project"
+
+
+def test_description_and_chat_link_are_optional():
+    agent = parse_config(base()).agents[0]
+    assert (agent.summary, agent.chat_url, agent.project) == (None, None, None)
 
 
 def test_duplicate_ids():
@@ -80,3 +118,27 @@ def test_missing_and_invalid_files(tmp_path):
     bad.write_text("[collector\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="invalid TOML"):
         load_config(bad)
+
+
+@pytest.mark.parametrize("url", CHAT_URLS["valid"])
+def test_shared_valid_chat_urls(url):
+    assert parse_config(base(chat_url=url)).agents[0].chat_url == url
+
+
+@pytest.mark.parametrize("url", CHAT_URLS["invalid"])
+def test_shared_invalid_chat_urls(url):
+    with pytest.raises(ConfigError, match="chat_url must be"):
+        parse_config(base(chat_url=url))
+
+
+# Zod's .max() counts UTF-16 code units; an emoji outside the BMP is two of them.
+EMOJI = "\U0001f642"
+
+
+def test_lengths_are_counted_in_utf16_units_like_zod():
+    agent = parse_config(base(summary=EMOJI * 60, project=EMOJI * 24)).agents[0]
+    assert (agent.summary, agent.project) == (EMOJI * 60, EMOJI * 24)
+    with pytest.raises(ConfigError, match="summary is longer than 120"):
+        parse_config(base(summary=EMOJI * 61))
+    with pytest.raises(ConfigError, match="project is longer than 48"):
+        parse_config(base(project=EMOJI * 25))

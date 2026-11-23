@@ -213,6 +213,9 @@ def make_config(home: Path, tmp_path: Path, **collector: Any):
                 "kind": "llm",
                 "source": "hermes",
                 "profile": "hunter",
+                "summary": "Looks for internships, once a day",
+                "chat_url": "https://t.me/example_hunter_bot",
+                "project": "example-hunter",
             },
             {
                 "id": "signals",

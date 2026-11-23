@@ -38,7 +38,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from .protocol import MAX_COLLECTOR_MESSAGE_BYTES, RELAY_MAX_SNAPSHOT_AGE_MS, CloseCode
+from .protocol import (
+    MAX_COLLECTOR_MESSAGE_BYTES,
+    PROTOCOL_VERSION,
+    RELAY_MAX_SNAPSHOT_AGE_MS,
+    CloseCode,
+)
 from .timeutil import iso, parse_ts
 
 log = logging.getLogger(__name__)
@@ -69,13 +74,16 @@ class RelayTiming:
 def fingerprint(snapshot: dict[str, Any]) -> str:
     """Hash of the meaningful content of a snapshot.
 
-    Ignores ``generatedAt`` and ``quota.observedAt`` (they change on every run) and
+    Ignores ``generatedAt`` and ``quotas[].observedAt`` (they change on every run) and
     buckets host metrics, so the relay sends on real changes only.
     """
     body = {k: v for k, v in snapshot.items() if k != "generatedAt"}
-    quota = body.get("quota")
-    if isinstance(quota, dict):
-        body["quota"] = {k: v for k, v in quota.items() if k != "observedAt"}
+    quotas = body.get("quotas")
+    if isinstance(quotas, list):
+        body["quotas"] = [
+            {k: v for k, v in q.items() if k != "observedAt"} if isinstance(q, dict) else q
+            for q in quotas
+        ]
     host = body.get("host")
     if isinstance(host, dict):
         host = dict(host)
@@ -203,7 +211,7 @@ def read_snapshot(path: Path) -> dict[str, Any] | None:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None
-    if not isinstance(data, dict) or data.get("v") != 1:
+    if not isinstance(data, dict) or data.get("v") != PROTOCOL_VERSION:
         return None
     return data
 

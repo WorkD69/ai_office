@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol version. Bump on breaking changes; the worker rejects other versions. */
-export const PROTOCOL_VERSION = 1 as const;
+export const PROTOCOL_VERSION = 2 as const;
 
 /**
  * What a desk occupant is:
@@ -47,6 +47,21 @@ export const Usage = z.object({
 });
 export type Usage = z.infer<typeof Usage>;
 
+/**
+ * Chat links must point at a Telegram username (bots and people alike), optionally with a
+ * `start` payload. Nothing else: the web app opens this link on tap. Mirrored by the collector.
+ */
+export const CHAT_URL_PATTERN =
+  /^https:\/\/t\.me\/[A-Za-z0-9_]{5,32}(\?start=[A-Za-z0-9_-]{1,64})?$/;
+
+/** An agent's own number, e.g. "vacancies found this week". */
+export const AgentCounter = z.object({
+  label: z.string().min(1).max(40),
+  value: z.number().finite(),
+  period: z.enum(['day', 'week']).optional(),
+});
+export type AgentCounter = z.infer<typeof AgentCounter>;
+
 export const Agent = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,47}$/),
   name: z.string().min(1).max(40),
@@ -61,6 +76,15 @@ export const Agent = z.object({
   /** Usage since local midnight (collector timezone). */
   usageToday: Usage.nullable(),
   cron: z.array(CronJob).max(50),
+  // Optional v2 fields: filled from the collector's manual config now, from passports later.
+  // A collector that omits them gets the empty value, so parsed agents always have them.
+  /** One line on what the agent is for, e.g. "finds internships, once a day". */
+  summary: z.string().max(120).nullable().default(null),
+  /** Telegram chat with the agent. Only https://t.me/<username>, see {@link CHAT_URL_PATTERN}. */
+  chatUrl: z.string().max(200).regex(CHAT_URL_PATTERN).nullable().default(null),
+  counters: z.array(AgentCounter).max(3).default([]),
+  hasPassport: z.boolean().default(false),
+  project: z.string().max(48).nullable().default(null),
 });
 export type Agent = z.infer<typeof Agent>;
 
@@ -97,26 +121,70 @@ export const Snapshot = z.object({
   v: z.literal(PROTOCOL_VERSION),
   generatedAt: isoDate,
   agents: z.array(Agent).max(64),
-  quota: Quota.nullable(),
+  /** Model quotas (e.g. Codex now, Claude later), most important first. */
+  quotas: z.array(Quota).max(4),
   host: Host.nullable(),
 });
 export type Snapshot = z.infer<typeof Snapshot>;
 
-export const FeedEvent = z.object({
+/**
+ * Feed event codes. The protocol carries a code and parameters; the web app turns them into text
+ * in the viewer's language (i18n), so no component has to agree on English wording.
+ * - `joined` / `left`  — params `name`;
+ * - `status`           — params `name`, `status` (AgentStatus), `activity` only for `working`;
+ * - `activity`         — params `name`, `activity` (a working agent moved on to something new);
+ * - `cron_ran`         — params `name`, `job`, `outcome` ('ok' | 'failed' | 'finished');
+ * - `command`          — params `outcome` ('ok' | 'failed'), `detail` (control results, phase 3).
+ */
+export const FeedCode = z.enum(['joined', 'left', 'status', 'activity', 'cron_ran', 'command']);
+export type FeedCode = z.infer<typeof FeedCode>;
+
+/** Parameters of a coded message: short strings or numbers, never message bodies. */
+export const MessageParams = z
+  .record(z.string().max(32), z.union([z.string().max(240), z.number().finite()]))
+  .refine((p) => Object.keys(p).length <= 8, { message: 'at most 8 params' });
+export type MessageParams = z.infer<typeof MessageParams>;
+
+const FeedEventBase = z.object({
   id: z.string().max(80),
   at: isoDate,
   agentId: z.string().max(48).nullable(),
   level: z.enum(['info', 'warn', 'error']),
-  text: z.string().max(240),
 });
+
+/** What protocol v2 produces: a code with its params, never ready-made text. */
+export const CodedFeedEvent = FeedEventBase.extend({
+  code: FeedCode,
+  params: MessageParams,
+  text: z.undefined().optional(),
+}).strict();
+
+/**
+ * Ready-made English text, as protocol v1 stored it. The Durable Object keeps such rows in its
+ * feed across the upgrade, so clients must still show `text` for events without a `code`.
+ */
+export const LegacyFeedEvent = FeedEventBase.extend({
+  text: z.string().max(240),
+  code: z.undefined().optional(),
+  params: z.undefined().optional(),
+}).strict();
+
+export const FeedEvent = z.union([CodedFeedEvent, LegacyFeedEvent]);
 export type FeedEvent = z.infer<typeof FeedEvent>;
 
-/** "Needs you" item. Derived from a snapshot, so it disappears when the cause is resolved. */
+/**
+ * "Needs you" item. Derived from a snapshot, so it disappears when the cause is resolved.
+ * Params by kind: `approval` / `error` — `name`, optional `activity`; `offline` — `name`;
+ * `cron_failed` — `name`, `job` (one failed job, the agent itself may be fine).
+ */
+export const InboxKind = z.enum(['approval', 'error', 'cron_failed', 'offline']);
+export type InboxKind = z.infer<typeof InboxKind>;
+
 export const InboxItem = z.object({
   id: z.string().max(120),
   agentId: z.string().max(48),
-  kind: z.enum(['approval', 'error', 'cron_failed', 'offline']),
-  title: z.string().max(160),
+  kind: InboxKind,
+  params: MessageParams,
   since: isoDate.nullable(),
 });
 export type InboxItem = z.infer<typeof InboxItem>;

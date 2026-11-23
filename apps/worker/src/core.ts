@@ -5,16 +5,17 @@ import {
   diffSnapshots,
   FEED_LIMIT,
   MAX_COLLECTOR_MESSAGE_BYTES,
+  Snapshot,
   type FeedEvent,
   type OfficeState,
-  type Snapshot,
 } from '@ai-office/protocol';
 
 /** Persistence port. The Durable Object backs it with its SQLite storage; tests use memory. */
 export interface OfficeStore {
-  loadSnapshot(): StoredSnapshot | null;
+  /** What was saved, possibly by an older protocol version; see {@link restoreSnapshot}. */
+  loadSnapshot(): PersistedSnapshot | null;
   saveSnapshot(value: StoredSnapshot): void;
-  /** Newest first. */
+  /** Newest first. Events stored by protocol v1 have `text` and no `code`; both are valid. */
   loadFeed(limit: number): FeedEvent[];
   /** Inserts events, ignoring ids that already exist; returns the events actually inserted. */
   appendFeed(events: FeedEvent[]): FeedEvent[];
@@ -25,6 +26,29 @@ export interface StoredSnapshot {
   snapshot: Snapshot;
   savedAtMs: number;
   collectorLastSeenMs: number | null;
+}
+
+/** A stored snapshot as read back from storage, before its protocol version is checked. */
+export type PersistedSnapshot = Omit<StoredSnapshot, 'snapshot'> & { snapshot: unknown };
+
+/**
+ * Brings a snapshot saved by an older deployment up to the current protocol, so a Worker
+ * upgrade neither crashes on old storage nor loses the baseline the next diff is made against.
+ * v1 -> v2: `quota` becomes `quotas[]`, the new agent fields take their schema defaults.
+ * Anything unreadable yields `null` (the office starts empty until the next snapshot).
+ */
+export function restoreSnapshot(raw: unknown): Snapshot | null {
+  let candidate = raw;
+  if (isRecord(raw) && raw.v === 1) {
+    const { quota, ...rest } = raw;
+    candidate = { ...rest, v: 2, quotas: quota ? [quota] : [] };
+  }
+  const parsed = Snapshot.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -52,7 +76,7 @@ export class OfficeCore {
 
   constructor(private readonly store: OfficeStore) {
     const stored = store.loadSnapshot();
-    this.snapshot = stored?.snapshot ?? null;
+    this.snapshot = stored ? restoreSnapshot(stored.snapshot) : null;
     this.savedAtMs = stored?.savedAtMs ?? 0;
     this.collectorLastSeenMs = stored?.collectorLastSeenMs ?? null;
   }
@@ -91,7 +115,8 @@ export class OfficeCore {
           at: new Date(nowMs).toISOString(),
           agentId: null,
           level: message.ok ? 'info' : 'error',
-          text: `Command ${message.ok ? 'completed' : 'failed'}: ${message.detail}`.slice(0, 240),
+          code: 'command',
+          params: { outcome: message.ok ? 'ok' : 'failed', detail: message.detail.slice(0, 240) },
         };
         const newEvents = this.store.appendFeed([event]);
         this.store.trimFeed(FEED_LIMIT);
@@ -146,7 +171,7 @@ export function isSessionExpired(sessionExpMs: number | null, nowMs: number): bo
 
 /**
  * Two snapshots are "the same" if they differ only in fields that change on every export without
- * meaning anything to the viewer: the generation timestamp, the quota observation timestamp and
+ * meaning anything to the viewer: the generation timestamp, the quota observation timestamps and
  * sub-threshold host-metric noise. Host metrics are quantised exactly like the collector does.
  */
 export function sameContent(a: Snapshot, b: Snapshot): boolean {
@@ -157,7 +182,7 @@ function normalise(s: Snapshot): Snapshot {
   return {
     ...s,
     generatedAt: '',
-    quota: s.quota ? { ...s.quota, observedAt: '' } : null,
+    quotas: s.quotas.map((q) => ({ ...q, observedAt: '' })),
     host: s.host
       ? {
           ...s.host,

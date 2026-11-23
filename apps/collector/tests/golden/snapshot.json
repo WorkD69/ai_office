@@ -1,5 +1,5 @@
 {
-  "v": 1,
+  "v": 2,
   "generatedAt": "2026-11-19T12:00:00.000Z",
   "agents": [
     {
@@ -18,7 +18,12 @@
         "outputTokens": 2400,
         "cacheReadTokens": 150000
       },
-      "cron": []
+      "cron": [],
+      "summary": null,
+      "chatUrl": null,
+      "counters": [],
+      "hasPassport": false,
+      "project": null
     },
     {
       "id": "hunter",
@@ -55,7 +60,12 @@
           "lastRunAt": null,
           "lastStatus": null
         }
-      ]
+      ],
+      "summary": "Looks for internships, once a day",
+      "chatUrl": "https://t.me/example_hunter_bot",
+      "counters": [],
+      "hasPassport": false,
+      "project": "example-hunter"
     },
     {
       "id": "signals",
@@ -68,25 +78,32 @@
       "lastActivityAt": null,
       "model": null,
       "usageToday": null,
-      "cron": []
+      "cron": [],
+      "summary": null,
+      "chatUrl": null,
+      "counters": [],
+      "hasPassport": false,
+      "project": null
     }
   ],
-  "quota": {
-    "provider": "openai-codex",
-    "windows": [
-      {
-        "name": "5h",
-        "usedPercent": 41.2,
-        "resetsAt": "2026-11-19T14:00:00.000Z"
-      },
-      {
-        "name": "week",
-        "usedPercent": 6.0,
-        "resetsAt": null
-      }
-    ],
-    "observedAt": "2026-11-19T11:58:00.000Z"
-  },
+  "quotas": [
+    {
+      "provider": "openai-codex",
+      "windows": [
+        {
+          "name": "5h",
+          "usedPercent": 41.2,
+          "resetsAt": "2026-11-19T14:00:00.000Z"
+        },
+        {
+          "name": "week",
+          "usedPercent": 6.0,
+          "resetsAt": null
+        }
+      ],
+      "observedAt": "2026-11-19T11:58:00.000Z"
+    }
+  ],
   "host": {
     "memUsedMb": 1060.0,
     "memTotalMb": 1967.0,

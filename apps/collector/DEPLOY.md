@@ -58,6 +58,8 @@ sh deploy/install.sh --enable
 systemctl status office-status.timer office-exporter office-relay
 journalctl -u office-relay -n 20          # "connected to worker"
 ls -la /run/agent-office/ /run/ai-office-metrics/   # snapshot.json and projection, 0644
+# after an upgrade: the snapshot is fresh and has the current protocol version (2)
+python3 -c "import json; d = json.load(open('/run/agent-office/snapshot.json')); print(d['v'], d['generatedAt'])"
 systemctl show office-exporter -p MemoryCurrent
 systemd-analyze security office-exporter office-relay
 # negative checks

@@ -13,9 +13,23 @@ export function detectLang(languageCode: string | undefined): Lang {
   return code === 'ru' || code === 'uk' || code === 'be' ? 'ru' : 'en';
 }
 
+/**
+ * The live office belongs to its owner, who reads Russian; the public demo is for visitors and
+ * speaks English. `?lang=` (any value {@link detectLang} understands) overrides both.
+ */
+export function chooseLang(forced: string | null, mode: 'live' | 'demo'): Lang {
+  if (forced) return detectLang(forced);
+  return mode === 'live' ? 'ru' : 'en';
+}
+
 export interface Translator {
   lang: Lang;
   t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+}
+
+/** True if `key` exists in the dictionaries (for keys built from protocol values). */
+export function isMessageKey(key: string): key is MessageKey {
+  return key in en;
 }
 
 export function createTranslator(lang: Lang): Translator {
@@ -40,7 +54,7 @@ export function useI18n(): Translator {
 
 /** Room ids are free-form; known ones get a translated label, unknown ones are title-cased. */
 export function roomLabel(tr: Translator, roomId: string): string {
-  const key = `room.${roomId}` as MessageKey;
-  if (key in en) return tr.t(key);
+  const key = `room.${roomId}`;
+  if (isMessageKey(key)) return tr.t(key);
   return roomId.replace(/-/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }

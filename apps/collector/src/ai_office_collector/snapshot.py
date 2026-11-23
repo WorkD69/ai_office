@@ -14,7 +14,7 @@ from typing import Any
 from .config import AgentConfig, Config, HermesSource, SystemdSource, resolve_timezone
 from .hermes import StateDb, UsageToday, profile_home, read_cron_jobs, read_gateway
 from .host import SystemProbe
-from .protocol import PROTOCOL_VERSION
+from .protocol import MAX_QUOTAS, PROTOCOL_VERSION
 from .sanitize import clean_text
 from .status import GatewayView, SessionView, Verdict, hermes_status, systemd_status
 from .timeutil import iso, local_midnight, parse_ts
@@ -43,11 +43,12 @@ def build_snapshot(config: Config, probe: SystemProbe, now: datetime | None = No
             log.warning("agent %s: %s", agent.id, type(exc).__name__)
             agents.append(_base(agent, Verdict("error", f"collector: {type(exc).__name__}")))
 
+    quota = load_quota(s.quota_file) if s.quota_file else None
     return {
         "v": PROTOCOL_VERSION,
         "generatedAt": iso(now),
         "agents": agents,
-        "quota": load_quota(s.quota_file) if s.quota_file else None,
+        "quotas": [quota][:MAX_QUOTAS] if quota else [],
         "host": _host(probe, config, unit_states),
     }
 
@@ -175,6 +176,12 @@ def _base(agent: AgentConfig, verdict: Verdict) -> Json:
         "model": None,
         "usageToday": None,
         "cron": [],
+        "summary": agent.summary,
+        "chatUrl": agent.chat_url,
+        # Agent's own numbers arrive with passports (office v2, stage 2).
+        "counters": [],
+        "hasPassport": False,
+        "project": agent.project,
     }
 
 
