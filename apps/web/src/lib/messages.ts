@@ -53,6 +53,12 @@ export function inboxText(tr: Translator, item: InboxItem): string {
 /** Every param a reason text may use; a missing one shows as "?" rather than `{unit}`. */
 const REASON_VARS = ['platform', 'state', 'unit', 'error'] as const;
 
+/** Reason codes whose `state` param is a known word (PlatformState / UnitState) to translate. */
+const STATE_FAMILY: Readonly<Record<string, 'platform' | 'unit'>> = {
+  platform_down: 'platform',
+  unit_down: 'unit',
+};
+
 /**
  * Text of the collector's status reason (`Agent.reason`, or `reason` plus params in a feed event
  * or inbox item). A code this client does not know gives a generic phrase.
@@ -66,6 +72,11 @@ export function reasonText(
   if (!isMessageKey(key)) return tr.t('reason.unknown');
   const vars: Record<string, string> = {};
   for (const name of REASON_VARS) vars[name] = params[name] === undefined ? '?' : str(params[name]);
+  const family = STATE_FAMILY[code];
+  if (family) {
+    // Never the raw word: a state this client does not know reads as "unknown state".
+    vars.state = tr.t(known(`state.${family}.${str(params.state)}`, `state.${family}.unknown`));
+  }
   return tr.t(key, vars);
 }
 

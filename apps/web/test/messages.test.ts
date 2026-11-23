@@ -3,7 +3,9 @@ import {
   AgentStatus,
   FeedCode,
   InboxKind,
+  PlatformState,
   ReasonCode,
+  UnitState,
   type Agent,
   type AgentReason,
   type FeedEvent,
@@ -126,7 +128,7 @@ const REASON_CASES: Record<ReasonCode, AgentReason['params']> = {
   gateway_stopped: {},
   gateway_stale: {},
   platform_missing: { platform: 'Telegram' },
-  platform_down: { platform: 'Telegram', state: 'retrying' },
+  platform_down: { platform: 'Telegram', state: 'disconnected' },
   state_db_missing: {},
   no_units: {},
   unit_failed: { unit: 'broker' },
@@ -162,15 +164,57 @@ describe('status reasons', () => {
     expect(Object.keys(REASON_CASES).sort()).toEqual([...ReasonCode.options].sort());
   });
 
-  it.each(LANGS)('render every reason code in %s with its params filled in', (lang) => {
+  it.each(LANGS)('render every reason code in %s with its names filled in', (lang) => {
     const tr = createTranslator(lang);
     for (const code of ReasonCode.options) {
       const params = REASON_CASES[code];
       const text = reasonText(tr, code, params);
       expect(text, code).not.toMatch(/[{}]/);
       expect(text, code).not.toContain(code);
-      for (const value of Object.values(params)) expect(text, code).toContain(value);
+      // Names (unit, platform, exception class) stay as is; states are translated.
+      for (const [key, value] of Object.entries(params)) {
+        if (key !== 'state') expect(text, code).toContain(value);
+      }
     }
+  });
+
+  it.each(LANGS)('translate every known platform and unit state in %s', (lang) => {
+    const tr = createTranslator(lang);
+    const unknownPlatform = reasonText(tr, 'platform_down', {
+      platform: 'Telegram',
+      state: 'unknown',
+    });
+    const unknownUnit = reasonText(tr, 'unit_down', { unit: 'broker', state: 'unknown' });
+    for (const state of PlatformState.options) {
+      const text = reasonText(tr, 'platform_down', { platform: 'Telegram', state });
+      expect(text, state).not.toMatch(/[{}]/);
+      if (state !== 'unknown') expect(text, state).not.toBe(unknownPlatform);
+    }
+    for (const state of UnitState.options) {
+      const text = reasonText(tr, 'unit_down', { unit: 'broker', state });
+      expect(text, state).not.toMatch(/[{}]/);
+      if (state !== 'unknown') expect(text, state).not.toBe(unknownUnit);
+    }
+  });
+
+  it.each(LANGS)('show a generic phrase in %s for a state this client does not know', (lang) => {
+    const tr = createTranslator(lang);
+    const odd = reasonText(tr, 'unit_down', { unit: 'broker', state: 'hibernating' });
+    expect(odd).not.toContain('hibernating');
+    expect(odd).toBe(reasonText(tr, 'unit_down', { unit: 'broker', state: 'unknown' }));
+    expect(reasonText(tr, 'platform_down', { platform: 'Telegram' })).toBe(
+      reasonText(tr, 'platform_down', { platform: 'Telegram', state: 'unknown' }),
+    );
+  });
+
+  it('say the states in plain Russian', () => {
+    const ru = createTranslator('ru');
+    expect(reasonText(ru, 'unit_down', { unit: 'broker', state: 'inactive' })).toBe(
+      'служба broker не запущена',
+    );
+    expect(reasonText(ru, 'platform_down', { platform: 'Telegram', state: 'disconnected' })).toBe(
+      'шлюз Telegram отключён',
+    );
   });
 
   it('are translated into Russian', () => {
