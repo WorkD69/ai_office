@@ -39,7 +39,7 @@ export const ru: Record<MessageKey, string> = {
   'event.status.waiting_you': '{name} ждёт тебя',
   'event.status.waiting_external': '{name} ждёт ответа внешнего сервиса',
   'event.status.error': '{name} — ошибка',
-  'event.status.idle': '{name} отдыхает',
+  'event.status.idle': '{name}: нет задач',
   'event.status.offline': '{name} не на связи',
   'event.status.other': '{name}: статус изменился',
   'event.activity': '{name}: {activity}',

@@ -73,7 +73,8 @@ Durable Object (SQLite): новые записи — последний сним
 ```ts
 // событие ленты и пункт «требует тебя»: код + параметры, текст собирает веб
 FeedEvent  = { id, at, agentId | null, level: 'info'|'warn'|'error',
-               code: 'joined'|'left'|'status'|'activity'|'cron_ran',
+               code: 'joined'|'left'|'status'|'activity'|'cron_ran'|'command',
+               // command — результат команды управления (params: outcome 'ok'|'failed', detail)
                params: Record<string, string | number>,   // имена, статус, имя задачи, исход
                text?: string }                             // только старые записи
 InboxItem  = { id, agentId, kind: 'approval'|'error'|'cron_failed'|'offline',
