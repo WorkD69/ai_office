@@ -13,8 +13,12 @@ import { feedText, inboxText } from '../src/lib/messages';
 const AT = '2026-11-19T10:00:00.000Z';
 const LANGS: Lang[] = ['en', 'ru'];
 
-function event(code: FeedCode | undefined, params?: MessageParams, text?: string): FeedEvent {
-  return { id: 'e', at: AT, agentId: 'hunter', level: 'info', code, params, text };
+function event(code: FeedCode, params: MessageParams): FeedEvent {
+  return { id: 'e', at: AT, agentId: 'hunter', level: 'info', code, params };
+}
+
+function legacyEvent(text: string): FeedEvent {
+  return { id: 'e', at: AT, agentId: 'hunter', level: 'info', text };
 }
 
 function item(kind: InboxKind, params: MessageParams): InboxItem {
@@ -102,9 +106,7 @@ describe('feed and inbox texts', () => {
 
   it('show legacy feed events stored with ready-made text as is', () => {
     const tr = createTranslator('ru');
-    expect(feedText(tr, event(undefined, undefined, 'Coordinator hit an error'))).toBe(
-      'Coordinator hit an error',
-    );
+    expect(feedText(tr, legacyEvent('Coordinator hit an error'))).toBe('Coordinator hit an error');
   });
 
   it('do not break on a status this client does not know yet', () => {

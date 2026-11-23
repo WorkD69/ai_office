@@ -115,6 +115,22 @@ describe('FeedEvent schema', () => {
     expect(ok({})).toBe(false);
     expect(ok({ code: 'unknown_code', params: {} })).toBe(false);
   });
+
+  it('parses a feed row exactly as protocol v1 stored it', () => {
+    const stored = JSON.parse(
+      '{"id":"coordinator:status:error:2026-11-19T09:00:00.000Z","at":"2026-11-19T09:00:00.000Z",' +
+        '"agentId":"coordinator","level":"error","text":"Coordinator hit an error"}',
+    );
+    expect(FeedEvent.parse(stored)).toEqual(stored);
+  });
+
+  it('rejects a coded event without params and mixes of the two forms', () => {
+    const base = { id: 'e1', at: T0, agentId: null, level: 'info' as const };
+    const ok = (extra: object) => FeedEvent.safeParse({ ...base, ...extra }).success;
+    expect(ok({ code: 'joined' })).toBe(false);
+    expect(ok({ code: 'joined', text: 'A joined the office' })).toBe(false);
+    expect(ok({ text: 'Old event', params: { name: 'A' } })).toBe(false);
+  });
 });
 
 describe('diffSnapshots', () => {

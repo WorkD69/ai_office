@@ -145,23 +145,31 @@ export const MessageParams = z
   .refine((p) => Object.keys(p).length <= 8, { message: 'at most 8 params' });
 export type MessageParams = z.infer<typeof MessageParams>;
 
-export const FeedEvent = z
-  .object({
-    id: z.string().max(80),
-    at: isoDate,
-    agentId: z.string().max(48).nullable(),
-    level: z.enum(['info', 'warn', 'error']),
-    code: FeedCode.optional(),
-    params: MessageParams.optional(),
-    /**
-     * Ready-made English text. Only events stored by protocol v1 have it; the Durable Object
-     * keeps them in its feed, so clients must still show `text` when there is no `code`.
-     */
-    text: z.string().max(240).optional(),
-  })
-  .refine((e) => e.code !== undefined || e.text !== undefined, {
-    message: 'a feed event needs a code (or legacy text)',
-  });
+const FeedEventBase = z.object({
+  id: z.string().max(80),
+  at: isoDate,
+  agentId: z.string().max(48).nullable(),
+  level: z.enum(['info', 'warn', 'error']),
+});
+
+/** What protocol v2 produces: a code with its params, never ready-made text. */
+export const CodedFeedEvent = FeedEventBase.extend({
+  code: FeedCode,
+  params: MessageParams,
+  text: z.undefined().optional(),
+}).strict();
+
+/**
+ * Ready-made English text, as protocol v1 stored it. The Durable Object keeps such rows in its
+ * feed across the upgrade, so clients must still show `text` for events without a `code`.
+ */
+export const LegacyFeedEvent = FeedEventBase.extend({
+  text: z.string().max(240),
+  code: z.undefined().optional(),
+  params: z.undefined().optional(),
+}).strict();
+
+export const FeedEvent = z.union([CodedFeedEvent, LegacyFeedEvent]);
 export type FeedEvent = z.infer<typeof FeedEvent>;
 
 /**
