@@ -3,12 +3,15 @@ import {
   AgentStatus,
   FeedCode,
   InboxKind,
+  ReasonCode,
+  type Agent,
+  type AgentReason,
   type FeedEvent,
   type InboxItem,
   type MessageParams,
 } from '@ai-office/protocol';
 import { chooseLang, createTranslator, type Lang } from '../src/i18n';
-import { feedText, inboxText } from '../src/lib/messages';
+import { agentDetail, feedText, inboxText, reasonText } from '../src/lib/messages';
 
 const AT = '2026-11-19T10:00:00.000Z';
 const LANGS: Lang[] = ['en', 'ru'];
@@ -114,6 +117,116 @@ describe('feed and inbox texts', () => {
     const text = feedText(tr, event('status', { name: 'Hunter', status: 'sleeping' }));
     expect(text).toContain('Hunter');
     expect(text).not.toMatch(/[{}]/);
+  });
+});
+
+/** Params the collector sends for each reason code (see ReasonCode in the protocol schema). */
+const REASON_CASES: Record<ReasonCode, AgentReason['params']> = {
+  gateway_missing: {},
+  gateway_stopped: {},
+  gateway_stale: {},
+  platform_missing: { platform: 'Telegram' },
+  platform_down: { platform: 'Telegram', state: 'retrying' },
+  state_db_missing: {},
+  no_units: {},
+  unit_failed: { unit: 'broker' },
+  unit_down: { unit: 'broker', state: 'inactive' },
+  collector_error: { error: 'OSError' },
+};
+
+function agentWith(over: Partial<Agent>): Agent {
+  return {
+    id: 'signals',
+    name: 'Signals',
+    role: '',
+    room: 'trading',
+    kind: 'worker',
+    status: 'error',
+    activity: null,
+    lastActivityAt: null,
+    model: null,
+    usageToday: null,
+    cron: [],
+    summary: null,
+    chatUrl: null,
+    counters: [],
+    hasPassport: false,
+    project: null,
+    reason: null,
+    ...over,
+  };
+}
+
+describe('status reasons', () => {
+  it('cover every reason code of the protocol', () => {
+    expect(Object.keys(REASON_CASES).sort()).toEqual([...ReasonCode.options].sort());
+  });
+
+  it.each(LANGS)('render every reason code in %s with its params filled in', (lang) => {
+    const tr = createTranslator(lang);
+    for (const code of ReasonCode.options) {
+      const params = REASON_CASES[code];
+      const text = reasonText(tr, code, params);
+      expect(text, code).not.toMatch(/[{}]/);
+      expect(text, code).not.toContain(code);
+      for (const value of Object.values(params)) expect(text, code).toContain(value);
+    }
+  });
+
+  it('are translated into Russian', () => {
+    const en = createTranslator('en');
+    const ru = createTranslator('ru');
+    for (const code of ReasonCode.options) {
+      expect(reasonText(ru, code, REASON_CASES[code])).not.toBe(
+        reasonText(en, code, REASON_CASES[code]),
+      );
+    }
+    expect(reasonText(ru, 'gateway_stopped', {})).toBe('шлюз Hermes не запущен');
+  });
+
+  it.each(LANGS)(
+    'fall back to a generic phrase in %s for unknown codes or missing params',
+    (lang) => {
+      const tr = createTranslator(lang);
+      const unknown = reasonText(tr, 'some_future_reason', { unit: 'broker' });
+      expect(unknown).not.toMatch(/[{}]/);
+      expect(unknown).not.toContain('some_future_reason');
+      expect(unknown).toBe(tr.t('reason.unknown'));
+      expect(reasonText(tr, 'unit_down', {})).not.toMatch(/[{}]/);
+    },
+  );
+
+  it('are added to status events and inbox items that carry a reason code', () => {
+    const ru = createTranslator('ru');
+    const params = { name: 'Сигналы', reason: 'unit_failed', unit: 'broker' };
+    expect(feedText(ru, event('status', { ...params, status: 'error' }))).toBe(
+      'Сигналы — ошибка: служба broker упала',
+    );
+    expect(inboxText(ru, item('error', params))).toBe(
+      'Сигналы — ошибка, нужна помощь: служба broker упала',
+    );
+    const offline = { name: 'Охотник', reason: 'gateway_stopped' };
+    expect(inboxText(ru, item('offline', offline))).toBe(
+      'Охотник не на связи: шлюз Hermes не запущен',
+    );
+    expect(inboxText(ru, item('offline', { name: 'Охотник', reason: 'brand_new' }))).not.toMatch(
+      /[{}]|brand_new/,
+    );
+  });
+
+  it("show Hermes' own activity as is and nothing when there is neither", () => {
+    const tr = createTranslator('ru');
+    expect(agentDetail(tr, agentWith({ status: 'working', activity: 'calling web_search' }))).toBe(
+      'calling web_search',
+    );
+    expect(agentDetail(tr, agentWith({ status: 'working' }))).toBeNull();
+    const failed = agentWith({ reason: { code: 'unit_failed', params: { unit: 'broker' } } });
+    expect(agentDetail(tr, failed)).toBe('служба broker упала');
+    // An older v2 collector without reasons: its English text in activity is shown as is.
+    expect(agentDetail(tr, agentWith({ activity: 'broker failed' }))).toBe('broker failed');
+    expect(feedText(tr, event('status', { name: 'Охотник', status: 'working' }))).toBe(
+      'Охотник — в работе',
+    );
   });
 });
 

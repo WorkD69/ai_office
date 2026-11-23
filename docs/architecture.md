@@ -85,6 +85,8 @@ Pitfalls:
 - `reason` is additive within v2: a snapshot without it parses with `reason: null` (an older v2
   collector keeps its English text in `activity`, which is shown as is), and the schema accepts
   reason codes it does not list, so a newer collector never blanks an older Worker.
+  The web app (`reasonText`/`agentDetail` in `apps/web/src/lib/messages.ts`) shows a generic
+  phrase for codes it does not know and `?` for a missing param, never raw `{placeholders}`.
 - After upgrading the collector, check that `/run/agent-office/snapshot.json` is fresh and has
   `"v": 2` (see `apps/collector/DEPLOY.md`): the relay silently skips snapshots of another version.
 
