@@ -6,8 +6,16 @@ and fails if any value here drifts.
 
 from __future__ import annotations
 
+import re
+
 #: ``PROTOCOL_VERSION`` in schema.ts; the worker rejects other versions.
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
+
+#: ``CHAT_URL_PATTERN`` in schema.ts: a Telegram username link, optionally with ``?start=``.
+CHAT_URL_RE = re.compile(r"^https://t\.me/[A-Za-z0-9_]{5,32}(\?start=[A-Za-z0-9_-]{1,64})?$")
+
+#: ``Snapshot.quotas`` holds at most this many entries.
+MAX_QUOTAS = 4
 
 #: Subprotocol the browser offers (the collector authenticates with a bearer token instead).
 WS_SUBPROTOCOL = "ai-office"

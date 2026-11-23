@@ -11,6 +11,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from .protocol import CHAT_URL_RE
+from .sanitize import clean_text
+
 AGENT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 ROOM_RE = re.compile(r"^[a-z0-9-]{1,32}$")
 PROFILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -48,6 +51,11 @@ class AgentConfig:
     room: str
     kind: Kind
     source: HermesSource | SystemdSource
+    #: Stage 1 of office v2: the description and chat link come from this manual config
+    #: (passports replace it later). All optional.
+    summary: str | None = None
+    chat_url: str | None = None
+    project: str | None = None
 
 
 @dataclass(frozen=True)
@@ -194,7 +202,36 @@ def _parse_agent(item: dict[str, Any], where: str) -> AgentConfig:
     else:
         raise ConfigError(f"{where}.source must be 'hermes' or 'systemd'")
 
-    return AgentConfig(id=agent_id, name=name, role=role, room=room, kind=kind, source=source)
+    chat_url = item.get("chat_url")
+    if chat_url is not None and (
+        not isinstance(chat_url, str) or len(chat_url) > 200 or not CHAT_URL_RE.match(chat_url)
+    ):
+        raise ConfigError(f"{where}.chat_url must be https://t.me/<username>")
+
+    return AgentConfig(
+        id=agent_id,
+        name=name,
+        role=role,
+        room=room,
+        kind=kind,
+        source=source,
+        summary=_optional_text(item, "summary", where, 120),
+        chat_url=chat_url,
+        project=_optional_text(item, "project", where, 48),
+    )
+
+
+def _optional_text(item: dict[str, Any], key: str, where: str, limit: int) -> str | None:
+    """Optional one-line text, whitespace collapsed; too long is an error, not a silent cut."""
+    value = item.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ConfigError(f"{where}.{key} must be a string")
+    text = " ".join(value.split())
+    if len(text) > limit:
+        raise ConfigError(f"{where}.{key} is longer than {limit} characters")
+    return clean_text(text, limit)
 
 
 def resolve_timezone(name: str | None) -> tzinfo | None:

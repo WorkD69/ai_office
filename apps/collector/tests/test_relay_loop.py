@@ -20,10 +20,10 @@ class StopLoop(Exception):
 
 def write_snapshot(path, generated_at: datetime) -> None:
     snapshot = {
-        "v": 1,
+        "v": 2,
         "generatedAt": generated_at.isoformat().replace("+00:00", "Z"),
         "agents": [],
-        "quota": None,
+        "quotas": [],
         "host": None,
     }
     path.write_text(json.dumps(snapshot), encoding="utf-8")

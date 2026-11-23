@@ -1,5 +1,5 @@
 {
-  "v": 1,
+  "v": 2,
   "generatedAt": "2026-11-19T12:00:00.000Z",
   "agents": [
     {
@@ -18,7 +18,12 @@
         "outputTokens": 0,
         "cacheReadTokens": 0
       },
-      "cron": []
+      "cron": [],
+      "summary": null,
+      "chatUrl": null,
+      "counters": [],
+      "hasPassport": false,
+      "project": null
     },
     {
       "id": "hunter",
@@ -487,7 +492,12 @@
           "lastRunAt": null,
           "lastStatus": "error"
         }
-      ]
+      ],
+      "summary": "Описание агента Описание агента Описание агента Описание агента Описание агента Описание агента Описание агента конец ок",
+      "chatUrl": "https://t.me/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb?start=ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+      "counters": [],
+      "hasPassport": false,
+      "project": "pppppppppppppppppppppppppppppppppppppppppppppppp"
     },
     {
       "id": "signals",
@@ -500,35 +510,42 @@
       "lastActivityAt": null,
       "model": null,
       "usageToday": null,
-      "cron": []
+      "cron": [],
+      "summary": null,
+      "chatUrl": null,
+      "counters": [],
+      "hasPassport": false,
+      "project": null
     }
   ],
-  "quota": {
-    "provider": "provider provider provider provider pro…",
-    "windows": [
-      {
-        "name": "window window windo…",
-        "usedPercent": 100.0,
-        "resetsAt": null
-      },
-      {
-        "name": "window window windo…",
-        "usedPercent": 100.0,
-        "resetsAt": null
-      },
-      {
-        "name": "window window windo…",
-        "usedPercent": 100.0,
-        "resetsAt": null
-      },
-      {
-        "name": "window window windo…",
-        "usedPercent": 100.0,
-        "resetsAt": null
-      }
-    ],
-    "observedAt": "2026-11-19T11:58:00.000Z"
-  },
+  "quotas": [
+    {
+      "provider": "provider provider provider provider pro…",
+      "windows": [
+        {
+          "name": "window window windo…",
+          "usedPercent": 100.0,
+          "resetsAt": null
+        },
+        {
+          "name": "window window windo…",
+          "usedPercent": 100.0,
+          "resetsAt": null
+        },
+        {
+          "name": "window window windo…",
+          "usedPercent": 100.0,
+          "resetsAt": null
+        },
+        {
+          "name": "window window windo…",
+          "usedPercent": 100.0,
+          "resetsAt": null
+        }
+      ],
+      "observedAt": "2026-11-19T11:58:00.000Z"
+    }
+  ],
   "host": {
     "memUsedMb": 1060.0,
     "memTotalMb": 1967.0,

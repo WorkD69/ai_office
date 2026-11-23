@@ -44,7 +44,8 @@ that reads Hermes data cannot reach the internet.
 
 Only the fields of the protocol `Snapshot` (`packages/protocol/src/schema.ts`): agent status, a
 short activity line, timestamps, model name, today's token counters, cron job names/schedules/last
-result, host RAM/disk/load, service up/down and quota percentages.
+result, host RAM/disk/load, service up/down and quota percentages, plus what the owner wrote in
+the config for each agent (`summary`, `chat_url`, `project`).
 **Never read or sent**: message texts, prompts, session titles, cron job prompts or scripts, chat/user
 ids, plan names. The one free-text field that comes from Hermes (`last_activity_description`, a short
 machine-written line) passes through `sanitize.clean_text`: control/bidi characters removed,

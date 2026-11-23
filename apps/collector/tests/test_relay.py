@@ -18,10 +18,10 @@ from ai_office_collector.relay import (
 )
 
 SNAP = {
-    "v": 1,
+    "v": 2,
     "generatedAt": "2026-11-19T12:00:00.000Z",
     "agents": [],
-    "quota": None,
+    "quotas": [],
     "host": None,
 }
 
@@ -95,7 +95,7 @@ def test_backoff_is_bounded():
 def test_read_snapshot(tmp_path):
     p = tmp_path / "snapshot.json"
     assert read_snapshot(p) is None
-    p.write_text(json.dumps({"v": 2}), encoding="utf-8")
+    p.write_text(json.dumps({**SNAP, "v": 1}), encoding="utf-8")
     assert read_snapshot(p) is None
     p.write_text(json.dumps(SNAP), encoding="utf-8")
     assert read_snapshot(p) == SNAP
@@ -112,7 +112,10 @@ def test_fingerprint_buckets_volatile_host_metrics_and_ignores_quota_timestamp()
                 "load1": load,
                 "services": [],
             },
-            "quota": {"provider": "p", "observedAt": observed, "windows": []},
+            "quotas": [
+                {"provider": "p", "observedAt": observed, "windows": []},
+                {"provider": "q", "observedAt": observed, "windows": []},
+            ],
         }
 
     base = fingerprint(snap(1100, 0.06, "2026-11-19T12:00:00Z"))

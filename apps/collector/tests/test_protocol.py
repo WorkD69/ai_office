@@ -38,3 +38,10 @@ def test_constants_match_typescript():
         ("Replaced", "REPLACED"),
     ]:
         assert ts_number(constants, ts_name) == getattr(protocol.CloseCode, py_name)
+
+
+def test_chat_url_pattern_matches_typescript():
+    schema = (PROTOCOL_SRC / "schema.ts").read_text(encoding="utf-8")
+    match = re.search(r"CHAT_URL_PATTERN = /(.+)/;", schema)
+    assert match, "CHAT_URL_PATTERN not found in schema.ts"
+    assert match.group(1).replace("\\/", "/") == protocol.CHAT_URL_RE.pattern

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -119,6 +120,12 @@ def test_snapshot_matches_golden(hermes, tmp_path):
     assert by_id["hunter"]["cron"][0]["lastStatus"] == "error"
     assert by_id["signals"]["status"] == "error"
     assert "never exported" not in json.dumps(snap)
+    # Office v2, stage 1: description and chat link from the manual config, no passports yet.
+    assert by_id["hunter"]["summary"] == "Looks for internships, once a day"
+    assert by_id["hunter"]["chatUrl"] == "https://t.me/example_hunter_bot"
+    assert by_id["coordinator"]["summary"] is None
+    assert all(a["hasPassport"] is False and a["counters"] == [] for a in snap["agents"])
+    assert [q["provider"] for q in snap["quotas"]] == ["openai-codex"]
 
 
 def test_one_broken_agent_does_not_hide_the_others(hermes, tmp_path):
@@ -231,6 +238,13 @@ def test_worst_case_lengths_stay_within_schema_limits(hermes, tmp_path):
         encoding="utf-8",
     )
     cfg = make_config(hermes.home, tmp_path, timezone=None)
+    longest = replace(
+        cfg.agents[1],
+        summary="Описание агента " * 7 + "конец ок",  # exactly 120
+        chat_url="https://t.me/" + "b" * 32 + "?start=" + "s" * 64,
+        project="p" * 48,
+    )
+    cfg = replace(cfg, agents=(cfg.agents[0], longest, *cfg.agents[2:]))
     snap = build_snapshot(cfg, FakeProbe({}), now=NOW)
 
     if os.environ.get("UPDATE_GOLDEN"):

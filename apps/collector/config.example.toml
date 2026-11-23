@@ -26,6 +26,10 @@ timezone = "UTC"
 # ---- Desk occupants -------------------------------------------------------
 # source = "hermes":  a Hermes profile (status from gateway_state.json + state.db)
 # source = "systemd": a script or bot (status from `systemctl is-active`)
+# Optional per agent (shown on the agent card):
+#   summary  = one line on what the agent is for (<= 120 characters)
+#   chat_url = Telegram chat with the agent, only https://t.me/<username>
+#   project  = project the agent belongs to (<= 48 characters)
 
 [[agents]]
 id = "coordinator"
@@ -46,6 +50,8 @@ room = "opportunities"
 kind = "llm"
 source = "hermes"
 profile = "scout"
+summary = "Looks for internships and jobs, once a day"
+chat_url = "https://t.me/example_scout_bot"
 
 [[agents]]
 id = "trading-analyst"
