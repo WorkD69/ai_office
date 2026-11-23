@@ -61,6 +61,25 @@ the real deployment:
 4. The **web app** authenticates with Telegram Mini App `initData`, opens a WebSocket and
    renders. Outside Telegram it runs a seeded, synthetic demo instead (no real data is public).
 
+## Protocol v2: codes, not text
+
+Feed events and "needs you" items carry a `code` and `params` (agent name, status, job name,
+outcome), never ready-made sentences; the web app renders them with i18n (`apps/web/src/lib/messages.ts`):
+Russian for the owner in live mode, English in the public demo, `?lang=` overrides. Snapshots carry
+`quotas[]` (up to four) and optional agent card fields (`summary`, `chatUrl` limited to
+`https://t.me/<username>`, `counters`, `hasPassport`, `project`); in stage 1 the collector fills
+`summary`, `chatUrl` and `project` from its manual config.
+
+Pitfalls:
+
+- The Durable Object outlives deployments. Feed events stored by protocol v1 only have English
+  `text`; the schema still accepts them and the web app shows `text` when there is no `code`.
+  A v1 snapshot in storage is upgraded on load (`restoreSnapshot` in `apps/worker/src/core.ts`).
+- The Worker accepts exactly one protocol version, so the Worker and the collector are deployed
+  together on a version bump.
+- A failed scheduled job is a `cron_failed` item and a `cron_ran` event; it never changes the
+  agent's status (pinned by a protocol test).
+
 ## Status model
 
 `working · waiting_you · waiting_external · error · idle · offline` — `waiting_you` is
