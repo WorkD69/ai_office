@@ -13,7 +13,8 @@ export function QuotaCard({ quotas, now }: { quotas: readonly Quota[]; now: numb
       {quotas.length === 0 ? (
         <p className="empty">{t('quota.none')}</p>
       ) : (
-        quotas.map((q) => <QuotaBlock key={q.provider} quota={q} now={now} />)
+        // Providers may repeat (the schema allows it), so the index keeps keys unique.
+        quotas.map((q, i) => <QuotaBlock key={`${i}:${q.provider}`} quota={q} now={now} />)
       )}
     </section>
   );
