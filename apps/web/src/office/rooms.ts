@@ -150,8 +150,10 @@ const FALLBACK: readonly RoomTheme[] = [
   },
 ];
 
+/** Theme of a room; ids come from data, so only own keys count ('constructor' is a room too). */
 export function roomTheme(roomId: string): RoomTheme {
-  return THEMES[roomId] ?? (FALLBACK[hash32(roomId) % FALLBACK.length] as RoomTheme);
+  if (Object.hasOwn(THEMES, roomId)) return THEMES[roomId] as RoomTheme;
+  return FALLBACK[hash32(roomId) % FALLBACK.length] as RoomTheme;
 }
 
 /** Every theme (for preloading the floors they use). */

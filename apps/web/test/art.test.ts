@@ -31,7 +31,7 @@ import {
   topRow,
   type Pixels,
 } from '../src/office/pixels';
-import { allThemes, FLOOR_TILES } from '../src/office/rooms';
+import { allThemes, FLOOR_TILES, roomTheme } from '../src/office/rooms';
 
 describe('pixels', () => {
   it('colorize keeps alpha and maps grey to the requested hue', () => {
@@ -278,6 +278,15 @@ describe('badges and themes', () => {
       expect(getPixel(b, 5, 4)).toEqual(getPixel(b, 0, 0)); // glyph in ink
     }
     expect(dotPixels().width).toBe(6);
+  });
+
+  it('room ids that are Object.prototype names get a normal fallback theme', () => {
+    for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      const theme = roomTheme(id);
+      expect(allThemes()).toContain(theme);
+      expect(theme.accent).toMatch(/^#[0-9a-f]{6}$/);
+    }
+    expect(roomTheme('hq').accent).toBe('#f2b84b');
   });
 
   it('themes only use shipped floors and furniture', () => {

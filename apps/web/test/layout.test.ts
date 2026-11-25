@@ -247,6 +247,15 @@ describe('tile map', () => {
   });
 });
 
+describe('hostile room ids', () => {
+  it('lays out rooms named like Object.prototype members', () => {
+    const odd = ['constructor', '__proto__', 'toString'].map((room, i) => ({ id: `a${i}`, room }));
+    const layout = layoutOffice(odd, 2);
+    expect(layout.rooms.map((r) => r.id).sort()).toEqual(['__proto__', 'constructor', 'toString']);
+    expect(layout.seats.size).toBe(3);
+  });
+});
+
 describe('hitTest', () => {
   it('finds the agent in its desk slot and nothing on a wall', () => {
     const layout = layoutOffice(DEMO, 3);
