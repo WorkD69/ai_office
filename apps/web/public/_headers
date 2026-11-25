@@ -16,3 +16,7 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Pixel Agents art: the path carries the upstream tag; a new art version gets a new path.
+/pixel-agents/v1.6.0/*
+  Cache-Control: public, max-age=31536000, immutable

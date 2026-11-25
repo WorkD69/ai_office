@@ -36,7 +36,7 @@ export const COL_SEATED = 7;
 export type Skin = 'base' | 'pale' | 'tan' | 'dark';
 export type Slot = 'pants' | 'top' | 'jacket' | 'hair' | 'hat';
 
-/** Layer files available in `public/pixel-agents/characters/<slot>/<id>.png`. */
+/** Layer files available in `public/pixel-agents/v1.6.0/characters/<slot>/<id>.png`. */
 export const PARTS: Readonly<Record<Slot, readonly string[]>> = {
   pants: ['jeans', 'skirt'],
   top: ['tshirt', 'long_sleeved_shirt', 'turtleneck'],

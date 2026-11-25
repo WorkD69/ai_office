@@ -1,5 +1,5 @@
 /**
- * Loads the Pixel Agents PNGs (public/pixel-agents, see ASSETS.md) once and prepares every
+ * Loads the Pixel Agents PNGs (public/pixel-agents/v1.6.0, see ASSETS.md) once and prepares every
  * sprite the scene needs as an offscreen canvas at 1 art pixel per pixel: recoloured floors
  * and walls, furniture, the red error monitor, characters composed from wardrobe layers and
  * our own status badges.
@@ -11,7 +11,8 @@ import { FURNITURE, FURNITURE_IDS, REQUIRED_FURNITURE, type FurnitureId } from '
 import { colorize, redScreen, type Hsbc, type Pixels } from './pixels';
 import { FLOOR_TILES, type FloorTile } from './rooms';
 
-const BASE = '/pixel-agents/';
+/** Versioned by the upstream tag, so the files can be cached as immutable (see _headers). */
+const BASE = '/pixel-agents/v1.6.0/';
 /** Dark walls between rooms: Pixel Agents' wall pieces recoloured. */
 export const WALL_COLOUR: Hsbc = { h: 214, s: 30, b: -100, c: -55 };
 

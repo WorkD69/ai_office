@@ -1,5 +1,5 @@
 /**
- * Pixel Agents furniture we use (public/pixel-agents/furniture, see ASSETS.md) and its size
+ * Pixel Agents furniture we use (public/pixel-agents/v1.6.0/furniture, see ASSETS.md) and its size
  * in 16 px tiles. Sizes are checked against the PNGs when they load.
  */
 export const FURNITURE = {

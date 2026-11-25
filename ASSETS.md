@@ -9,7 +9,7 @@ upstream ([ADR 0004](docs/adr/0004-pixel-agents-art.md)). Everything else is our
 - Source: <https://github.com/pixel-agents-hq/pixel-agents>, tag `v1.6.0`, commit
   `4dd14d612fd37d89ffbbc977959f572395c4eec8`.
 - Licence: MIT, Copyright (c) 2026 Pablo De Lucca. The full text ships next to the files:
-  [`apps/web/public/pixel-agents/LICENSE`](apps/web/public/pixel-agents/LICENSE).
+  [`apps/web/public/pixel-agents/v1.6.0/LICENSE`](apps/web/public/pixel-agents/v1.6.0/LICENSE).
 - Characters in Pixel Agents were baked from **MetroCity** by JIK-A-4
   (<https://jik-a-4.itch.io/metrocity-free-topdown-character-pack>, CC0 1.0) and then
   redrawn. CC0 needs no credit; we credit it anyway. The CC0 licence was read from the
@@ -20,7 +20,7 @@ upstream ([ADR 0004](docs/adr/0004-pixel-agents-art.md)). Everything else is our
   compared). Our code recolours some of them at runtime (floors, walls, clothes, hair, the red
   error screen), composes the characters from layers and derives a raised-hand frame.
 
-All paths are under `apps/web/public/pixel-agents/`; `Upstream` is relative to the repository
+All paths are under `apps/web/public/pixel-agents/v1.6.0/` (versioned so browsers can cache them for good); `Upstream` is relative to the repository
 root of Pixel Agents at the commit above.
 
 | Files here                                                                                                                                                                                                                                                                                               | Upstream                                               |

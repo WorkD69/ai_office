@@ -6,7 +6,7 @@ import type { FurnitureId } from './furniture';
 import { hash32 } from './hash';
 import type { Hsbc } from './pixels';
 
-/** Floor tiles shipped in public/pixel-agents/floors. */
+/** Floor tiles shipped in public/pixel-agents/v1.6.0/floors. */
 export type FloorTile = 0 | 1 | 3 | 4 | 5 | 6 | 7;
 export const FLOOR_TILES: readonly FloorTile[] = [0, 1, 3, 4, 5, 6, 7];
 
