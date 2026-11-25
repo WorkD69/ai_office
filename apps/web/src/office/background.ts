@@ -79,7 +79,8 @@ export function renderBackground(layout: OfficeLayout, art: SceneArt): HTMLCanva
   for (const room of layout.rooms) {
     for (const decor of room.decor) {
       decor.parts.forEach((part, i) => {
-        const image = art.furniture[part.id];
+        const image = art.decor[part.id];
+        if (!image) return;
         const x = (decor.tx + part.dx) * TILE;
         const y = (decor.ty + part.dy) * TILE;
         // Wall decor hangs in front of its wall row; parts stack in the order they are listed.
@@ -89,8 +90,8 @@ export function renderBackground(layout: OfficeLayout, art: SceneArt): HTMLCanva
     }
     for (const desk of room.desks) {
       const deskY = desk.y;
-      sprite(art.furniture.DESK_FRONT, desk.x + TILE, deskY, deskY + FURNITURE.DESK_FRONT.h * TILE);
-      sprite(art.furniture.CUSHIONED_BENCH, desk.x + 2 * TILE, deskY + 2 * TILE, deskY + 3 * TILE);
+      sprite(art.desk, desk.x + TILE, deskY, deskY + FURNITURE.DESK_FRONT.h * TILE);
+      sprite(art.chair, desk.x + 2 * TILE, deskY + 2 * TILE, deskY + 3 * TILE);
     }
   }
 

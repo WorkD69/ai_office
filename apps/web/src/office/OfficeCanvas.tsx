@@ -22,6 +22,10 @@ interface Props {
   statusLabel: (agent: Agent) => string;
   /** Shown instead of the scene when the device cannot give us a 2D canvas. */
   unavailableText: string;
+  /** Shown while the art loads, and when it fails (with a retry button). */
+  loadingText: string;
+  artFailedText: string;
+  retryText: string;
 }
 
 const FRAME_MS = 1000 / 30;
@@ -41,6 +45,9 @@ export function OfficeCanvas({
   mode,
   statusLabel,
   unavailableText,
+  loadingText,
+  artFailedText,
+  retryText,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,22 +56,25 @@ export function OfficeCanvas({
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const [art, setArt] = useState<SceneArt | null>(null);
+  const [artFailed, setArtFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    setArtFailed(false);
     loadSceneArt().then(
       (loaded) => {
         if (live) setArt(loaded);
       },
       (err: unknown) => {
         console.error('Office art failed to load', err);
-        if (live) setFailed(true);
+        if (live) setArtFailed(true);
       },
     );
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   // The animation loop reads the latest props through a ref so it never has to restart.
   // Updated in a layout effect (not during render) so React can safely re-run renders.
@@ -206,6 +216,24 @@ export function OfficeCanvas({
           </div>
         )}
       </div>
+      {!art && (
+        <div className="office-status" role={artFailed ? 'alert' : 'status'}>
+          {artFailed ? (
+            <div>
+              <p>{artFailedText}</p>
+              <button
+                type="button"
+                className="office-status__retry"
+                onClick={() => setAttempt((n) => n + 1)}
+              >
+                {retryText}
+              </button>
+            </div>
+          ) : (
+            loadingText
+          )}
+        </div>
+      )}
     </div>
   );
 }

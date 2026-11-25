@@ -145,6 +145,30 @@ button {
   filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.45));
 }
 
+.office-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.office-status p {
+  margin: 0 0 12px;
+}
+
+.office-status__retry {
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--shadow);
+  cursor: pointer;
+}
+
 .office-tooltip {
   position: absolute;
   z-index: 5;

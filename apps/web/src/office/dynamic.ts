@@ -3,7 +3,7 @@
  * All coordinates are art pixels; the caller applies the integer device scale.
  */
 import type { AgentStatus } from '@ai-office/protocol';
-import { agentView, type Monitor } from './agentView';
+import { agentView } from './agentView';
 import type { SceneArt } from './art';
 import { TILE, type Desk, type OfficeLayout, type Rect, type RoomLayout } from './layout';
 import { roomTheme } from './rooms';
@@ -82,21 +82,6 @@ export function personOrigin(desk: Desk): { x: number; y: number } {
   return { x: desk.x + 2 * TILE, y: desk.y + 2 * TILE - 18 };
 }
 
-function monitorSprite(art: SceneArt, monitor: Monitor): CanvasImageSource {
-  switch (monitor) {
-    case 'on-1':
-      return art.furniture.PC_FRONT_ON_1;
-    case 'on-2':
-      return art.furniture.PC_FRONT_ON_2;
-    case 'on-3':
-      return art.furniture.PC_FRONT_ON_3;
-    case 'off':
-      return art.furniture.PC_FRONT_OFF;
-    case 'error':
-      return art.monitorError;
-  }
-}
-
 /** Computer and person of one desk (the desk and chair are in the background). */
 export function drawDesk(
   ctx: Ctx,
@@ -108,7 +93,7 @@ export function drawDesk(
   still: boolean,
 ): void {
   const view = agentView(agent.status, t, still);
-  ctx.drawImage(monitorSprite(art, view.monitor), desk.x + 2 * TILE, desk.y);
+  ctx.drawImage(art.monitors[view.monitor], desk.x + 2 * TILE, desk.y);
   const person = art.characters[look % art.characters.length];
   if (!person || view.pose === 'absent') return;
   const frame =

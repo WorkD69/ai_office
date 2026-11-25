@@ -6,7 +6,8 @@
  */
 import { bubblePixels, dotPixels, type BubbleKind } from './badges';
 import { allLookFiles, composeCharacter, LOOKS } from './characters';
-import { FURNITURE, FURNITURE_IDS, type FurnitureId } from './furniture';
+import type { Monitor } from './agentView';
+import { FURNITURE, FURNITURE_IDS, REQUIRED_FURNITURE, type FurnitureId } from './furniture';
 import { colorize, redScreen, type Hsbc, type Pixels } from './pixels';
 import { FLOOR_TILES, type FloorTile } from './rooms';
 
@@ -21,9 +22,13 @@ export interface CharacterSprites {
 }
 
 export interface SceneArt {
-  furniture: Readonly<Record<FurnitureId, HTMLCanvasElement>>;
-  /** Lit monitor with a red screen (error). */
-  monitorError: HTMLCanvasElement;
+  /** Desk and chair of every agent (required). */
+  desk: HTMLCanvasElement;
+  chair: HTMLCanvasElement;
+  /** Computer by monitor state, including the red error screen (required). */
+  monitors: Readonly<Record<Monitor, HTMLCanvasElement>>;
+  /** Decor; a piece that failed to load is missing and simply not drawn. */
+  decor: Readonly<Partial<Record<FurnitureId, HTMLCanvasElement>>>;
   /** 64x128 sheet of 16 wall pieces, already dark. */
   wall: HTMLCanvasElement;
   floor: (tile: FloorTile, colour: Hsbc) => HTMLCanvasElement;
@@ -80,28 +85,41 @@ export function loadSceneArt(): Promise<SceneArt> {
   return pending;
 }
 
+async function loadFurniture(id: FurnitureId): Promise<HTMLCanvasElement> {
+  const px = await loadPixels(`furniture/${FURNITURE[id].file}.png`);
+  const want = FURNITURE[id];
+  if (px.width !== want.w * 16 || px.height !== want.h * 16) {
+    throw new Error(
+      `furniture ${id} is ${px.width}x${px.height}, want ${want.w * 16}x${want.h * 16}`,
+    );
+  }
+  return toCanvas(px);
+}
+
+/**
+ * Required sprites (floors, walls, desk, computer, chair, character layers) fail the whole
+ * load, so the scene can show an error with a retry; a missing decor piece is only logged.
+ */
 async function buildArt(): Promise<SceneArt> {
   const lookFiles = allLookFiles();
-  const [furniturePixels, floorPixels, wallPixels, layerPixels] = await Promise.all([
-    Promise.all(FURNITURE_IDS.map((id) => loadPixels(`furniture/${FURNITURE[id].file}.png`))),
+  const optional = FURNITURE_IDS.filter((id) => !REQUIRED_FURNITURE.includes(id));
+  const [required, floorPixels, wallPixels, layerPixels, decorResults] = await Promise.all([
+    Promise.all(REQUIRED_FURNITURE.map(loadFurniture)),
     Promise.all(FLOOR_TILES.map((tile) => loadPixels(`floors/floor_${tile}.png`))),
     loadPixels('walls/wall_0.png'),
     Promise.all(lookFiles.map((file) => loadPixels(`characters/${file}`))),
+    Promise.allSettled(optional.map(loadFurniture)),
   ]);
-
-  const furniture = {} as Record<FurnitureId, HTMLCanvasElement>;
-  FURNITURE_IDS.forEach((id, i) => {
-    const px = furniturePixels[i] as Pixels;
-    const want = FURNITURE[id];
-    if (px.width !== want.w * 16 || px.height !== want.h * 16) {
-      throw new Error(
-        `furniture ${id} is ${px.width}x${px.height}, want ${want.w * 16}x${want.h * 16}`,
-      );
-    }
-    furniture[id] = toCanvas(px);
+  const core = new Map(REQUIRED_FURNITURE.map((id, i) => [id, required[i] as HTMLCanvasElement]));
+  const need = (id: FurnitureId) => core.get(id) as HTMLCanvasElement;
+  const decor: Partial<Record<FurnitureId, HTMLCanvasElement>> = {};
+  decorResults.forEach((result, i) => {
+    const id = optional[i] as FurnitureId;
+    if (result.status === 'fulfilled') decor[id] = result.value;
+    else console.warn(`Office decor ${id} is not drawn`, result.reason);
   });
-  const monitorIndex = FURNITURE_IDS.indexOf('PC_FRONT_ON_1');
-  const monitorError = toCanvas(redScreen(furniturePixels[monitorIndex] as Pixels));
+  const lit = need('PC_FRONT_ON_1');
+  const litPixels = context(lit).getImageData(0, 0, lit.width, lit.height);
 
   const floorSource = new Map<FloorTile, Pixels>();
   FLOOR_TILES.forEach((tile, i) => floorSource.set(tile, floorPixels[i] as Pixels));
@@ -130,8 +148,16 @@ async function buildArt(): Promise<SceneArt> {
   });
 
   return {
-    furniture,
-    monitorError,
+    desk: need('DESK_FRONT'),
+    chair: need('CUSHIONED_BENCH'),
+    monitors: {
+      'on-1': lit,
+      'on-2': need('PC_FRONT_ON_2'),
+      'on-3': need('PC_FRONT_ON_3'),
+      off: need('PC_FRONT_OFF'),
+      error: toCanvas(redScreen(litPixels)),
+    },
+    decor,
     wall: toCanvas(colorize(wallPixels, WALL_COLOUR)),
     floor,
     characters,

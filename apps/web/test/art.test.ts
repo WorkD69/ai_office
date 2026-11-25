@@ -17,7 +17,7 @@ import {
   SHEET_W,
   type Look,
 } from '../src/office/characters';
-import { FURNITURE } from '../src/office/furniture';
+import { FURNITURE, REQUIRED_FURNITURE } from '../src/office/furniture';
 import {
   colorize,
   createPixels,
@@ -287,6 +287,24 @@ describe('badges and themes', () => {
       expect(theme.accent).toMatch(/^#[0-9a-f]{6}$/);
     }
     expect(roomTheme('hq').accent).toBe('#f2b84b');
+  });
+
+  it('decor never depends on a required sprite, so a missing decor file only hides decor', () => {
+    expect([...REQUIRED_FURNITURE].sort()).toEqual(
+      [
+        'CUSHIONED_BENCH',
+        'DESK_FRONT',
+        'PC_FRONT_OFF',
+        'PC_FRONT_ON_1',
+        'PC_FRONT_ON_2',
+        'PC_FRONT_ON_3',
+      ].sort(),
+    );
+    for (const theme of allThemes()) {
+      for (const spec of [...theme.wall, ...theme.floorDecor]) {
+        for (const part of spec.parts) expect(REQUIRED_FURNITURE).not.toContain(part.id);
+      }
+    }
   });
 
   it('themes only use shipped floors and furniture', () => {

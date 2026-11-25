@@ -163,6 +163,9 @@ export function App() {
                 mode={narrow ? 'scroll' : 'fit'}
                 statusLabel={(a) => t(`status.${a.status}`)}
                 unavailableText={t('scene.unavailable')}
+                loadingText={t('scene.artLoading')}
+                artFailedText={t('scene.artFailed')}
+                retryText={t('scene.retry')}
               />
             </ErrorBoundary>
           ) : (

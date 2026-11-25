@@ -31,3 +31,13 @@ export const FURNITURE = {
 export type FurnitureId = keyof typeof FURNITURE;
 
 export const FURNITURE_IDS = Object.keys(FURNITURE) as FurnitureId[];
+
+/** Sprites every desk needs; the rest is decor. */
+export const REQUIRED_FURNITURE: readonly FurnitureId[] = [
+  'DESK_FRONT',
+  'CUSHIONED_BENCH',
+  'PC_FRONT_ON_1',
+  'PC_FRONT_ON_2',
+  'PC_FRONT_ON_3',
+  'PC_FRONT_OFF',
+];
