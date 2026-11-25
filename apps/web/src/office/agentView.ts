@@ -51,3 +51,30 @@ export function agentView(status: AgentStatus, t: number, still: boolean): Agent
       return { pose: 'absent', monitor: 'off', badge: null, lift: 0 };
   }
 }
+
+/** Blink of the name plate of an agent waiting for you, and of the selection frame. */
+export const PLATE_BLINK_MS = 400;
+export const SELECTION_BLINK_MS = 350;
+
+/**
+ * Everything time-based the scene shows, as a string: the canvas is redrawn only when it
+ * changes (or the data does). With reduced motion it never changes.
+ */
+export function animationKey(
+  statuses: readonly AgentStatus[],
+  selected: boolean,
+  t: number,
+  still: boolean,
+): string {
+  if (still) return 'still';
+  const tick = (period: number, frames: number) => Math.floor(Math.max(0, t) / period) % frames;
+  const working = statuses.includes('working');
+  const waiting = statuses.includes('waiting_you');
+  return [
+    working ? tick(MONITOR_FRAME_MS, 3) : '-',
+    waiting ? tick(HAND_SWAY_MS, 2) : '-',
+    waiting ? tick(BUBBLE_HOP_MS, 2) : '-',
+    waiting ? tick(PLATE_BLINK_MS, 2) : '-',
+    selected ? tick(SELECTION_BLINK_MS, 2) : '-',
+  ].join('');
+}

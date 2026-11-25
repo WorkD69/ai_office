@@ -1,6 +1,7 @@
 import type { AgentStatus } from '@ai-office/protocol';
 import type { SceneArt } from './art';
 import { renderBackground } from './background';
+import { animationKey } from './agentView';
 import { assignLooks } from './characters';
 import {
   drawActivityBubble,
@@ -36,6 +37,12 @@ export class OfficeRenderer {
   /** One CSS pixel in art pixels. */
   private u = 1;
   private readonly ctx: CanvasRenderingContext2D;
+  /** What the canvas shows now; a frame with the same inputs is skipped. */
+  private shown: { frame: SceneFrame | null; labels: SceneLabels | null; anim: string } = {
+    frame: null,
+    labels: null,
+    anim: '',
+  };
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -53,12 +60,33 @@ export class OfficeRenderer {
     this.canvas.width = layout.width * scale;
     this.canvas.height = layout.height * scale;
     this.background = renderBackground(layout, art);
+    this.shown = { frame: null, labels: null, anim: '' };
   }
 
-  /** `still` = prefers-reduced-motion: no blinking, swaying or hopping. */
-  draw(frame: SceneFrame, labels: SceneLabels, t: number, still: boolean): void {
+  /**
+   * Redraws only when the inputs (data, selection, hover, labels) or a visible animation
+   * frame changed. `still` = prefers-reduced-motion: no blinking, swaying or hopping.
+   * Returns whether it drew.
+   */
+  draw(frame: SceneFrame, labels: SceneLabels, t: number, still: boolean): boolean {
     const { layout, background, art, ctx } = this;
-    if (!layout || !background || !art) return;
+    if (!layout || !background || !art) return false;
+    const anim = animationKey(
+      frame.agents.map((a) => a.status),
+      frame.selectedId !== null,
+      t,
+      still,
+    );
+    const prev = this.shown.frame;
+    const same =
+      prev !== null &&
+      prev.agents === frame.agents &&
+      prev.selectedId === frame.selectedId &&
+      prev.hoverId === frame.hoverId &&
+      this.shown.labels === labels &&
+      this.shown.anim === anim;
+    if (same) return false;
+    this.shown = { frame, labels, anim };
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(background, 0, 0);
@@ -95,5 +123,6 @@ export class OfficeRenderer {
         );
       }
     }
+    return true;
   }
 }

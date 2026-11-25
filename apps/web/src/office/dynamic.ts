@@ -63,13 +63,28 @@ export function text(
   ctx.fillText(maxWidth ? ellipsize(ctx, value, maxWidth) : value, x, y);
 }
 
+const widths = new Map<string, number>();
+
+/** `measureText` width, cached per font and text (labels repeat every redraw). */
+export function textWidth(ctx: Ctx, value: string): number {
+  const key = `${ctx.font}
+${value}`;
+  let w = widths.get(key);
+  if (w === undefined) {
+    if (widths.size > 4000) widths.clear();
+    w = ctx.measureText(value).width;
+    widths.set(key, w);
+  }
+  return w;
+}
+
 export function ellipsize(ctx: Ctx, value: string, maxWidth: number): string {
-  if (ctx.measureText(value).width <= maxWidth) return value;
+  if (textWidth(ctx, value) <= maxWidth) return value;
   let lo = 0;
   let hi = value.length;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
-    if (ctx.measureText(`${value.slice(0, mid)}…`).width <= maxWidth) lo = mid;
+    if (textWidth(ctx, `${value.slice(0, mid)}…`) <= maxWidth) lo = mid;
     else hi = mid - 1;
   }
   return `${value.slice(0, lo)}…`;
@@ -154,7 +169,7 @@ export function drawPlate(
   const border = 2 * u;
   const maxW = desk.w - 4;
   const chrome = border * 2 + pad * 2 + dot + 4 * u;
-  const textW = Math.min(ctx.measureText(agent.name).width, maxW - chrome);
+  const textW = Math.min(textWidth(ctx, agent.name), maxW - chrome);
   const w = Math.min(maxW, Math.ceil(textW + chrome));
   const h = 18 * u;
   const x = desk.x + (desk.w - w) / 2;
@@ -185,7 +200,7 @@ export function drawRoomSign(ctx: Ctx, room: RoomLayout, label: string, u: numbe
   const value = label.toUpperCase();
   const pad = 6 * u;
   const border = 2 * u;
-  const w = Math.min(max.w, Math.ceil(ctx.measureText(value).width + 2 * (pad + border)));
+  const w = Math.min(max.w, Math.ceil(textWidth(ctx, value) + 2 * (pad + border)));
   const accent = roomTheme(room.id).accent;
   px(ctx, INK.outline, max.x, max.y, w, max.h);
   px(ctx, INK.plate, max.x + border, max.y + border, w - 2 * border, max.h - 2 * border);
@@ -239,10 +254,7 @@ export function drawActivityBubble(
   ctx.font = `600 ${size}px ${FONT}`;
   const maxW = Math.min(260 * u, layout.width - 4);
   const lines = wrap(ctx, value, maxW - 2 * pad).slice(0, 3);
-  const w = Math.min(
-    maxW,
-    Math.ceil(Math.max(...lines.map((l) => ctx.measureText(l).width)) + 2 * pad),
-  );
+  const w = Math.min(maxW, Math.ceil(Math.max(...lines.map((l) => textWidth(ctx, l))) + 2 * pad));
   const h = lines.length * line + pad;
   const anchorX = desk.x + Math.floor(desk.w / 2);
   const bx = Math.max(2, Math.min(layout.width - w - 2, Math.round(anchorX - w / 2)));
@@ -290,7 +302,7 @@ function wrap(ctx: Ctx, value: string, maxWidth: number): string[] {
   let line = '';
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth || !line) line = candidate;
+    if (textWidth(ctx, candidate) <= maxWidth || !line) line = candidate;
     else {
       lines.push(line);
       line = word;

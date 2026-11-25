@@ -8,7 +8,7 @@ import {
 } from 'react';
 import type { Agent } from '@ai-office/protocol';
 import { loadSceneArt, type SceneArt } from './art';
-import { chooseGrid, hitTest, type OfficeLayout } from './layout';
+import { chooseGrid, hitTest, type Grid, type OfficeLayout } from './layout';
 import { OfficeRenderer, type SceneLabels } from './renderer';
 
 interface Props {
@@ -58,6 +58,8 @@ export function OfficeCanvas({
   const [art, setArt] = useState<SceneArt | null>(null);
   const [artFailed, setArtFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  /** The grid the canvas is sized for (set once the art is in and the buffer is ready). */
+  const [configured, setConfigured] = useState<Grid | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -132,6 +134,7 @@ export function OfficeCanvas({
     rendererRef.current.configure(grid.layout, grid.deviceScale, art, grid.cssPerArt);
     canvas.style.width = `${grid.layout.width * grid.cssPerArt}px`;
     canvas.style.height = `${grid.layout.height * grid.cssPerArt}px`;
+    setConfigured(grid);
   }, [grid, size, art, failed]);
 
   useEffect(() => {
@@ -157,16 +160,17 @@ export function OfficeCanvas({
     };
   }, []);
 
-  // Keep the selected desk visible when the office is taller than the screen.
+  // Keep the selected desk visible when the office is taller than the area. Runs once the
+  // canvas has its buffer and CSS size, so `?select=` on a fresh load lands on the desk.
   useEffect(() => {
     const wrap = wrapRef.current;
-    if (!wrap || !grid || !size || !selectedId || mode !== 'scroll') return;
-    const desk = grid.layout.seats.get(selectedId);
-    if (!desk) return;
-    const cssScale = grid.cssPerArt;
-    const centre = (desk.y + desk.h / 2) * cssScale;
-    wrap.scrollTo({ top: centre - wrap.clientHeight / 2, behavior: 'smooth' });
-  }, [selectedId, grid, size, mode]);
+    if (!wrap || !configured || !selectedId) return;
+    const desk = configured.layout.seats.get(selectedId);
+    if (!desk || wrap.scrollHeight <= wrap.clientHeight) return;
+    const centre = (desk.y + desk.h / 2) * configured.cssPerArt;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    wrap.scrollTo({ top: centre - wrap.clientHeight / 2, behavior: still ? 'auto' : 'smooth' });
+  }, [selectedId, configured]);
 
   const toLogical = (e: ReactMouseEvent<HTMLCanvasElement>, layout: OfficeLayout) => {
     const rect = e.currentTarget.getBoundingClientRect();

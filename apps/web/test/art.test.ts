@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentView } from '../src/office/agentView';
+import { agentView, animationKey } from '../src/office/agentView';
 import { BUBBLE_H, BUBBLE_W, bubblePixels, dotPixels } from '../src/office/badges';
 import {
   allLookFiles,
@@ -264,6 +264,25 @@ describe('agentView: sprite and frame by status', () => {
     for (const t of [0, 450, 700, 900, 1300]) {
       expect(agentView('working', t, true).monitor).toBe('on-1');
       expect(agentView('waiting_you', t, true)).toMatchObject({ pose: 'hand-up', lift: 0 });
+    }
+  });
+});
+
+describe('animationKey: when the canvas needs a redraw', () => {
+  it('changes only when a visible animation frame changes', () => {
+    const key = (statuses: Parameters<typeof animationKey>[0], t: number, sel = false) =>
+      animationKey(statuses, sel, t, false);
+    expect(key(['idle', 'offline'], 0)).toBe(key(['idle', 'offline'], 5000));
+    expect(key(['working'], 0)).toBe(key(['working'], 399));
+    expect(key(['working'], 0)).not.toBe(key(['working'], 400));
+    expect(key(['waiting_external', 'error'], 0)).toBe(key(['waiting_external', 'error'], 9999));
+    expect(key(['waiting_you'], 0)).not.toBe(key(['waiting_you'], 400));
+    expect(key(['idle'], 0, true)).not.toBe(key(['idle'], 350, true));
+  });
+
+  it('never changes with reduced motion', () => {
+    for (const t of [0, 400, 900, 12345]) {
+      expect(animationKey(['working', 'waiting_you'], true, t, true)).toBe('still');
     }
   });
 });
