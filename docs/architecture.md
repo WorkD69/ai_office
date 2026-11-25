@@ -127,3 +127,4 @@ and the relay executes only allow-listed, expiring, single-use commands.
 - [ADR 0001 — Outbound-only relay on Cloudflare](adr/0001-outbound-only-relay.md)
 - [ADR 0002 — Canvas 2D with code-defined sprites](adr/0002-canvas-sprites.md)
 - [ADR 0003 — Control plane through the local Hermes API](adr/0003-control-plane.md)
+- [ADR 0004 — Art from Pixel Agents, our own renderer](adr/0004-pixel-agents-art.md)
