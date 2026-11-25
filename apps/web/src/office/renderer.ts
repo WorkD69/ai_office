@@ -14,7 +14,6 @@ import {
   type SceneAgent,
 } from './dynamic';
 import type { OfficeLayout } from './layout';
-import { roomTheme } from './rooms';
 
 export interface SceneLabels {
   room: (roomId: string) => string;
@@ -113,7 +112,7 @@ export class OfficeRenderer {
       const desk = layout.seats.get(frame.selectedId);
       const agent = byId.get(frame.selectedId);
       if (desk && agent) {
-        drawSelection(ctx, desk, roomTheme(desk.roomId).accent, still ? 0 : t, true);
+        drawSelection(ctx, desk, INK.accent, still ? 0 : t, true);
         drawActivityBubble(
           ctx,
           layout,

@@ -28,6 +28,8 @@ export interface DecorSpec {
   x: number;
   y: number;
   fromBottom?: boolean;
+  /** A decorative zone (rack, coffee corner, big plant): only in rooms with a decor strip. */
+  zone?: boolean;
   /** Footprint in tiles. */
   w: number;
   h: number;
@@ -55,6 +57,7 @@ const wall = (id: FurnitureId, x: number, w = 1): DecorSpec => one(id, x, 0, w, 
 
 /** A server rack made of a side desk with two side-facing computers on it. */
 const RACK: DecorSpec = {
+  zone: true,
   x: -1,
   y: 0,
   w: 1,
@@ -67,6 +70,7 @@ const RACK: DecorSpec = {
 };
 
 const COFFEE_CORNER: DecorSpec = {
+  zone: true,
   x: -1,
   y: 1,
   fromBottom: true,
@@ -82,19 +86,19 @@ const THEMES: Readonly<Record<string, RoomTheme>> = {
   hq: {
     accent: '#f2b84b',
     floor: { tile: 6, colour: { h: 25, s: 48, b: -43, c: -88 } },
-    wall: [wall('CLOCK', -2), wall('HANGING_PLANT', -1), wall('DOUBLE_BOOKSHELF', -4, 2)],
+    wall: [wall('HANGING_PLANT', -1), wall('CLOCK', -2), wall('DOUBLE_BOOKSHELF', -4, 2)],
     floorDecor: [one('PLANT', -1, 1, 1, 2), one('PLANT_2', -1, 1, 1, 2, true)],
   },
   opportunities: {
     accent: '#86df7c',
     floor: { tile: 3, colour: { h: 95, s: 20, b: -30, c: -75 } },
-    wall: [wall('WHITEBOARD', -2, 2), wall('HANGING_PLANT', -3)],
+    wall: [wall('WHITEBOARD', -2, 2), wall('SMALL_PAINTING_2', -1), wall('HANGING_PLANT', -3)],
     floorDecor: [one('CACTUS', -1, 1, 1, 2), one('PLANT', -1, 1, 1, 2, true)],
   },
   trading: {
     accent: '#79bcff',
     floor: { tile: 0, colour: { h: 209, s: 39, b: -25, c: -80 } },
-    wall: [wall('LARGE_PAINTING', -2, 2), wall('SMALL_PAINTING_2', -3)],
+    wall: [wall('LARGE_PAINTING', -2, 2), wall('SMALL_PAINTING', -1), wall('SMALL_PAINTING_2', -3)],
     floorDecor: [one('PLANT_2', -1, 1, 1, 2), one('CACTUS', -1, 1, 1, 2, true)],
   },
   community: {
@@ -106,26 +110,26 @@ const THEMES: Readonly<Record<string, RoomTheme>> = {
   server: {
     accent: '#7ee0ff',
     floor: { tile: 7, colour: { h: 230, s: 8, b: -40, c: -70 } },
-    wall: [wall('DOUBLE_BOOKSHELF', -2, 2), wall('HANGING_PLANT', -3)],
+    wall: [wall('DOUBLE_BOOKSHELF', -2, 2), wall('HANGING_PLANT', -1), wall('HANGING_PLANT', -3)],
     floorDecor: [RACK, one('PLANT_2', -1, 1, 1, 2), one('BIN', -1, 1, 1, 1, true)],
   },
   dev: {
     accent: '#5fe3c9',
     floor: { tile: 4, colour: { h: 175, s: 20, b: -34, c: -78 } },
-    wall: [wall('WHITEBOARD', -2, 2), wall('CLOCK', -3)],
+    wall: [wall('WHITEBOARD', -2, 2), wall('CLOCK', -1), wall('CLOCK', -3)],
     floorDecor: [one('PLANT', -1, 1, 1, 2), COFFEE_CORNER],
   },
   content: {
     accent: '#ffd27a',
     floor: { tile: 1, colour: { h: 35, s: 30, b: -30, c: -75 } },
-    wall: [wall('LARGE_PAINTING', -2, 2), wall('CLOCK', -3)],
+    wall: [wall('LARGE_PAINTING', -2, 2), wall('CLOCK', -1), wall('CLOCK', -3)],
     floorDecor: [one('PLANT', -1, 1, 1, 2), one('PLANT_2', -1, 1, 1, 2, true)],
   },
   lounge: {
     accent: '#ff9fb2',
     floor: { tile: 6, colour: { h: 345, s: 22, b: -40, c: -85 } },
     wall: [wall('SMALL_PAINTING', -1), wall('LARGE_PAINTING', -3, 2)],
-    floorDecor: [one('LARGE_PLANT', -2, 1, 2, 3), one('PLANT', -1, 1, 1, 2)],
+    floorDecor: [{ ...one('LARGE_PLANT', -2, 1, 2, 3), zone: true }, one('PLANT', -1, 1, 1, 2)],
   },
 };
 
@@ -145,7 +149,7 @@ const FALLBACK: readonly RoomTheme[] = [
   {
     accent: '#8ae0ff',
     floor: { tile: 4, colour: { h: 195, s: 22, b: -34, c: -78 } },
-    wall: [wall('WHITEBOARD', -2, 2)],
+    wall: [wall('WHITEBOARD', -2, 2), wall('CLOCK', -1)],
     floorDecor: [one('CACTUS', -1, 1, 1, 2)],
   },
 ];

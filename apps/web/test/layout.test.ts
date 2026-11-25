@@ -19,6 +19,7 @@ import {
   type Placeable,
   type Rect,
 } from '../src/office/layout';
+import { signRect } from '../src/office/dynamic';
 import { buildTileMap, cellAt, FLOOR, VOID, WALL, wallMask } from '../src/office/tilemap';
 
 /** The demo roster (apps/web/src/data/demo.ts): 9 agents in 6 rooms. */
@@ -151,6 +152,30 @@ describe('layoutOffice', () => {
             for (let x = 0; x < d.tw; x++) {
               expect(taken.has(`${d.tx - room.tx + x},${d.ty - room.ty + y}`)).toBe(false);
             }
+          }
+        }
+      }
+    }
+  });
+
+  it('decorative zones (rack, coffee corner) only in wide rooms, never in the phone layout', () => {
+    const zoneParts = new Set(['DESK_SIDE', 'SMALL_TABLE_SIDE', 'LARGE_PLANT']);
+    const hasZone = (tiles: number) =>
+      layoutOffice(DEMO, 2, tiles).rooms.some((r) =>
+        r.decor.some((d) => d.parts.some((p) => zoneParts.has(p.id))),
+      );
+    expect(hasZone(ROOM_TILES)).toBe(false);
+    expect(hasZone(ROOM_TILES_WIDE)).toBe(true);
+  });
+
+  it('the room sign stays within the wall tiles kept free of decor', () => {
+    for (const tiles of [ROOM_TILES, ROOM_TILES_WIDE]) {
+      for (const room of layoutOffice(DEMO, 2, tiles).rooms) {
+        for (const u of [1 / 3, 0.5, 1]) {
+          const sign = signRect(room, u);
+          expect(sign.x + sign.w).toBeLessThanOrEqual(room.x + SIGN_TILES * TILE);
+          for (const d of room.decor.filter((x) => x.layer === 'wall')) {
+            expect(d.tx * TILE).toBeGreaterThanOrEqual(sign.x + sign.w);
           }
         }
       }

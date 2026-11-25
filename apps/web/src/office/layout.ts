@@ -30,8 +30,8 @@ export const ROOM_TILES = 5;
 export const ROOM_TILES_WIDE = 6;
 /** Rooms with this many agents take a whole grid row (rows of desks side by side). */
 export const SPAN_FROM = 3;
-/** Wall tiles on the left of every room kept clear for the room sign. */
-export const SIGN_TILES = 3;
+/** Wall tiles on the left of every room kept for the room sign (the sign never grows past them). */
+export const SIGN_TILES = 4;
 /** Most columns the desktop layout tries. */
 const MAX_COLS = 5;
 
@@ -163,12 +163,13 @@ export function layoutOffice(
   const columns = Math.max(1, cols);
   const rooms: RoomLayout[] = [];
   const seats = new Map<string, Desk>();
+  const zones = roomTiles >= ROOM_TILES_WIDE;
   let ty = WALL_TILES;
   for (const row of packRows(plans, columns)) {
     const width = (cell: Cell) => cell.span * roomTiles + (cell.span - 1);
     const th = Math.max(...row.map((cell) => floorTiles(cell.plan.agentIds.length, width(cell))));
     for (const cell of row) {
-      const room = buildRoom(cell.plan, cell.col * (roomTiles + 1), ty, width(cell), th);
+      const room = buildRoom(cell.plan, cell.col * (roomTiles + 1), ty, width(cell), th, zones);
       for (const desk of room.desks) seats.set(desk.agentId, desk);
       rooms.push(room);
     }
@@ -188,7 +189,14 @@ export function layoutOffice(
   };
 }
 
-function buildRoom(plan: RoomPlan, tx: number, ty: number, tw: number, th: number): RoomLayout {
+function buildRoom(
+  plan: RoomPlan,
+  tx: number,
+  ty: number,
+  tw: number,
+  th: number,
+  zones: boolean,
+): RoomLayout {
   const perRow = desksPerRow(tw);
   const desks: Desk[] = plan.agentIds.map((agentId, i) => {
     const stx = tx + (i % perRow) * SLOT_W;
@@ -217,7 +225,7 @@ function buildRoom(plan: RoomPlan, tx: number, ty: number, tw: number, th: numbe
     desks,
     decor: [],
   };
-  room.decor = placeDecor(room);
+  room.decor = placeDecor(room, zones);
   return room;
 }
 
@@ -234,7 +242,8 @@ export function slotTiles(desk: Desk, room: RoomLayout): Array<[number, number]>
   return out;
 }
 
-function placeDecor(room: RoomLayout): PlacedDecor[] {
+/** `zones`: decorative zones are allowed (only in the wide-room layout, never on phones). */
+function placeDecor(room: RoomLayout, zones: boolean): PlacedDecor[] {
   const theme = roomTheme(room.id);
   const placed: PlacedDecor[] = [];
   const left = (spec: DecorSpec) => (spec.x < 0 ? room.tw + spec.x : spec.x);
@@ -261,6 +270,7 @@ function placeDecor(room: RoomLayout): PlacedDecor[] {
   const used = new Set<string>();
   for (const desk of room.desks) for (const [x, y] of slotTiles(desk, room)) used.add(`${x},${y}`);
   for (const spec of theme.floorDecor) {
+    if (spec.zone && !zones) continue;
     const x = left(spec);
     const y = spec.fromBottom ? room.th - spec.h - spec.y : spec.y;
     if (x < 0 || y < 0 || x + spec.w > room.tw || y + spec.h > room.th) continue;

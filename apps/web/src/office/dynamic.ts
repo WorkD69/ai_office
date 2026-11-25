@@ -5,7 +5,14 @@
 import type { AgentStatus } from '@ai-office/protocol';
 import { agentView } from './agentView';
 import type { SceneArt } from './art';
-import { TILE, type Desk, type OfficeLayout, type Rect, type RoomLayout } from './layout';
+import {
+  SIGN_TILES,
+  TILE,
+  type Desk,
+  type OfficeLayout,
+  type Rect,
+  type RoomLayout,
+} from './layout';
 import { roomTheme } from './rooms';
 
 type Ctx = CanvasRenderingContext2D;
@@ -26,6 +33,8 @@ export const INK = {
   text: '#ece6d8',
   muted: '#9b93ab',
   bubble: '#f4f1ea',
+  /** --accent: focus and selection. */
+  accent: '#f2b84b',
 } as const;
 
 export const STATUS_COLOURS: Readonly<Record<AgentStatus, string>> = {
@@ -152,7 +161,7 @@ export function drawBadge(
  */
 export const LABEL_FONT_PX = 11;
 
-/** Name plate under the desk: status square + name, in the room colour (muted when offline). */
+/** Name plate under the desk: status square + name (muted when offline). */
 export function drawPlate(
   ctx: Ctx,
   desk: Desk,
@@ -180,17 +189,20 @@ export function drawPlate(
   px(ctx, STATUS_COLOURS[agent.status], x + border + pad, y + (h - dot) / 2, dot, dot);
   text(ctx, agent.name, x + border + pad + dot + 4 * u, y + h / 2, {
     size,
-    colour: present ? roomTheme(desk.roomId).accent : INK.muted,
+    colour: present ? INK.text : INK.muted,
     maxWidth: textW,
   });
 }
 
 // ---------------------------------------------------------------- room signs
 
-/** The sign sits on the left of the room's wall band (its widest possible box). */
+/**
+ * The sign sits on the left of the room's wall band, within the SIGN_TILES that wall decor
+ * leaves free (layout.ts), so it never covers a painting or a clock.
+ */
 export function signRect(room: RoomLayout, u: number): Rect {
   const h = 18 * u;
-  return { x: room.x + 3, y: room.y - TILE / 2 - h / 2, w: room.w - 6, h };
+  return { x: room.x + 3, y: room.y - TILE / 2 - h / 2, w: SIGN_TILES * TILE - 5, h };
 }
 
 export function drawRoomSign(ctx: Ctx, room: RoomLayout, label: string, u: number): void {

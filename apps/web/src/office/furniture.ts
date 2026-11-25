@@ -21,7 +21,6 @@ export const FURNITURE = {
   LARGE_PAINTING: { file: 'LARGE_PAINTING/LARGE_PAINTING', w: 2, h: 2 },
   SMALL_PAINTING: { file: 'SMALL_PAINTING/SMALL_PAINTING', w: 1, h: 2 },
   SMALL_PAINTING_2: { file: 'SMALL_PAINTING_2/SMALL_PAINTING_2', w: 1, h: 2 },
-  BOOKSHELF: { file: 'BOOKSHELF/BOOKSHELF', w: 2, h: 1 },
   DOUBLE_BOOKSHELF: { file: 'DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF', w: 2, h: 2 },
   BIN: { file: 'BIN/BIN', w: 1, h: 1 },
   COFFEE: { file: 'COFFEE/COFFEE', w: 1, h: 1 },
