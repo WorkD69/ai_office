@@ -119,9 +119,9 @@ export function OfficeCanvas({
         return;
       }
     }
-    rendererRef.current.configure(grid.layout, grid.scale, art, size.dpr);
-    canvas.style.width = `${(grid.layout.width * grid.scale) / size.dpr}px`;
-    canvas.style.height = `${(grid.layout.height * grid.scale) / size.dpr}px`;
+    rendererRef.current.configure(grid.layout, grid.deviceScale, art, grid.cssPerArt);
+    canvas.style.width = `${grid.layout.width * grid.cssPerArt}px`;
+    canvas.style.height = `${grid.layout.height * grid.cssPerArt}px`;
   }, [grid, size, art, failed]);
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export function OfficeCanvas({
     if (!wrap || !grid || !size || !selectedId || mode !== 'scroll') return;
     const desk = grid.layout.seats.get(selectedId);
     if (!desk) return;
-    const cssScale = grid.scale / size.dpr;
+    const cssScale = grid.cssPerArt;
     const centre = (desk.y + desk.h / 2) * cssScale;
     wrap.scrollTo({ top: centre - wrap.clientHeight / 2, behavior: 'smooth' });
   }, [selectedId, grid, size, mode]);

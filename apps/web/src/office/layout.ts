@@ -159,7 +159,8 @@ export function layoutOffice(
   roomTiles: number = ROOM_TILES,
 ): OfficeLayout {
   const plans = planRooms(agents);
-  const columns = Math.max(1, Math.min(cols, plans.length || 1));
+  // More columns than rooms is fine: the last room of a grid row stretches over the rest.
+  const columns = Math.max(1, cols);
   const rooms: RoomLayout[] = [];
   const seats = new Map<string, Desk>();
   let ty = WALL_TILES;
@@ -287,22 +288,66 @@ export function spriteSize(id: keyof typeof FURNITURE): { w: number; h: number }
 }
 
 export interface Viewport {
+  /** CSS pixels. */
   width: number;
   height: number;
   dpr: number;
 }
 
+/**
+ * Backing-canvas limits. Big canvases fail silently (a blank scene) or eat memory on budget
+ * phones, so we stay at half the 16.7 MP (4096x4096) area limit of iOS Safari and well under
+ * the side limits of current browsers. Above them the device-pixel multiplier goes down
+ * (the art scale on screen stays the same, the pixels just get coarser).
+ */
+export const MAX_CANVAS_AREA = 8_388_608;
+export const MAX_CANVAS_SIDE = 8192;
+
 export interface Grid {
   layout: OfficeLayout;
-  /** Device pixels per art pixel (an integer). */
+  /** Integer CSS pixels per art pixel the grid was chosen for. */
   scale: number;
+  /** Integer device pixels per art pixel in the backing canvas. */
+  deviceScale: number;
+  /** CSS pixels per art pixel the canvas is shown at (keeps device pixels whole). */
+  cssPerArt: number;
 }
 
 /**
- * Picks columns, room width and the integer device-pixel scale for a viewport.
+ * Backing resolution for an art scale: device pixels per art pixel must be whole for crisp
+ * pixels, so `scale x dpr` is rounded (down when rounding up would overflow `fit`), and the
+ * CSS size follows it. Then the multiplier is lowered until the canvas is within the limits.
+ */
+export function backingFor(
+  layout: Pick<OfficeLayout, 'width' | 'height'>,
+  scale: number,
+  viewport: Viewport,
+  mode: 'fit' | 'scroll',
+): { deviceScale: number; cssPerArt: number } {
+  const exact = scale * viewport.dpr;
+  const fits = (device: number) => {
+    const css = device / viewport.dpr;
+    if (layout.width * css > viewport.width) return false;
+    return mode === 'scroll' || layout.height * css <= viewport.height;
+  };
+  const up = Math.max(1, Math.round(exact));
+  const ideal = fits(up) ? up : Math.max(1, Math.floor(exact));
+  const cssPerArt = ideal / viewport.dpr;
+  let deviceScale = ideal;
+  const tooBig = (d: number) =>
+    layout.width * d > MAX_CANVAS_SIDE ||
+    layout.height * d > MAX_CANVAS_SIDE ||
+    layout.width * layout.height * d * d > MAX_CANVAS_AREA;
+  while (deviceScale > 1 && tooBig(deviceScale)) deviceScale--;
+  return { deviceScale, cssPerArt };
+}
+
+/**
+ * Picks columns, room width and the integer CSS scale from the CSS size of the area (the
+ * grid does not depend on the device pixel ratio), then the backing resolution.
  * - `scroll` (phones): 2 columns that fill the width; the office scrolls down, never sideways.
- * - `fit` (laptops): the largest scale at which the whole office fits; if that is below 2 CSS
- *   pixels per art pixel, keep 2x and let the office scroll down.
+ * - `fit` (laptops): the largest scale at which the whole office fits; if that is below 2x,
+ *   keep 2x and let the office scroll down.
  * The wider rooms (with a decor strip) win only when they cost no scale.
  */
 export function chooseGrid(
@@ -311,29 +356,31 @@ export function chooseGrid(
   mode: 'fit' | 'scroll',
 ): Grid {
   const roomCount = Math.max(1, planRooms(agents).length);
-  const devW = Math.floor(viewport.width * viewport.dpr);
-  const devH = Math.floor(viewport.height * viewport.dpr);
+  const areaW = Math.floor(viewport.width);
+  const areaH = Math.floor(viewport.height);
   const colsList =
     mode === 'scroll'
-      ? [Math.min(2, roomCount)]
+      ? [2]
       : Array.from({ length: Math.min(roomCount, MAX_COLS) }, (_, i) => i + 1);
   const options = colsList.flatMap((cols) =>
     [ROOM_TILES, ROOM_TILES_WIDE].map((tiles) => layoutOffice(agents, cols, tiles)),
   );
-  const widthScale = (l: OfficeLayout) => Math.floor(devW / l.width);
+  const widthScale = (l: OfficeLayout) => Math.floor(areaW / l.width);
 
-  type Pick = { layout: OfficeLayout; scale: number; rank: number[] };
-  const best = (picks: Pick[]): Grid | null => {
-    const sorted = picks.sort((a, b) => {
+  type Choice = { layout: OfficeLayout; scale: number; rank: number[] };
+  const best = (picks: Choice[]): Choice | undefined =>
+    picks.sort((a, b) => {
       for (let i = 0; i < a.rank.length; i++) {
         const d = (b.rank[i] ?? 0) - (a.rank[i] ?? 0);
         if (d !== 0) return d;
       }
       return 0;
-    });
-    const top = sorted[0];
-    return top ? { layout: top.layout, scale: top.scale } : null;
-  };
+    })[0];
+  const finish = (c: Choice): Grid => ({
+    layout: c.layout,
+    scale: c.scale,
+    ...backingFor(c.layout, c.scale, viewport, mode),
+  });
 
   if (mode === 'scroll') {
     const pick = best(
@@ -341,27 +388,26 @@ export function chooseGrid(
         const scale = Math.max(1, widthScale(layout));
         return { layout, scale, rank: [scale, layout.roomTiles] };
       }),
-    );
-    return pick as Grid;
+    ) as Choice;
+    return finish(pick);
   }
 
   const fitted = best(
     options.map((layout) => {
-      const scale = Math.max(1, Math.min(widthScale(layout), Math.floor(devH / layout.height)));
+      const scale = Math.max(1, Math.min(widthScale(layout), Math.floor(areaH / layout.height)));
       const area = layout.width * layout.height * scale * scale;
       return { layout, scale, rank: [scale, layout.roomTiles, area] };
     }),
-  ) as Grid;
-  const minScale = Math.max(1, Math.round(2 * viewport.dpr));
-  if (fitted.scale >= minScale) return fitted;
-  // Too big to fit at 2x: keep 2x (or less on very narrow areas) and scroll down; prefer
-  // the layout with the fewest rows that still fits the width.
-  const wide = options.filter((l) => l.width * minScale <= devW);
-  if (wide.length === 0) return fitted;
+  ) as Choice;
+  const minScale = 2;
+  if (fitted.scale >= minScale) return finish(fitted);
+  // Too big to fit at 2x: keep 2x and scroll down; prefer the layout with the fewest rows
+  // that still fits the width.
+  const wide = options.filter((l) => l.width * minScale <= areaW);
   const pick = best(
     wide.map((layout) => ({ layout, scale: minScale, rank: [-layout.height, layout.roomTiles] })),
   );
-  return pick as Grid;
+  return finish(pick ?? fitted);
 }
 
 /** Logical point -> the agent whose desk slot contains it. */

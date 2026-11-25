@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  backingFor,
   chooseGrid,
+  MAX_CANVAS_AREA,
+  MAX_CANVAS_SIDE,
   FLOOR_PAD_TOP,
   hitTest,
   layoutOffice,
@@ -171,36 +174,58 @@ describe('layoutOffice', () => {
 });
 
 describe('chooseGrid', () => {
-  it('phone 390 px: 2 columns, the largest integer scale, no horizontal overflow', () => {
-    const { layout, scale } = chooseGrid(DEMO, PHONE, 'scroll');
+  it('phone 390 px: 2 columns at 2 CSS px per art pixel, no horizontal overflow', () => {
+    const { layout, scale, deviceScale, cssPerArt } = chooseGrid(DEMO, PHONE, 'scroll');
     expect(layout.cols).toBe(2);
     expect(layout.roomTiles).toBe(ROOM_TILES);
-    expect(Number.isInteger(scale)).toBe(true);
-    expect(scale).toBe(6); // 2 CSS px per art pixel at DPR 3
-    expect(layout.width * scale).toBeLessThanOrEqual(PHONE.width * PHONE.dpr);
-    expect(layout.width * (scale + 1)).toBeGreaterThan(PHONE.width * PHONE.dpr);
+    expect(scale).toBe(2);
+    expect(deviceScale).toBe(6);
+    expect(cssPerArt).toBe(2);
+    expect(layout.width * cssPerArt).toBeLessThanOrEqual(PHONE.width);
+    expect(layout.width * (scale + 1)).toBeGreaterThan(PHONE.width);
   });
 
   it('phone: the office may be taller than the screen (it scrolls down only)', () => {
-    const { layout, scale } = chooseGrid(DEMO, PHONE, 'scroll');
+    const { layout } = chooseGrid(DEMO, PHONE, 'scroll');
     expect(layout.tilesH).toBe(29);
-    expect(layout.height * scale).toBeGreaterThan(PHONE.height * PHONE.dpr * 0.5);
-  });
-
-  it('phone 360 px at DPR 2 also stays in 2 columns without overflow', () => {
-    const viewport = { width: 360, height: 700, dpr: 2 };
-    const { layout, scale } = chooseGrid(DEMO, viewport, 'scroll');
-    expect(layout.cols).toBe(2);
-    expect(layout.width * scale).toBeLessThanOrEqual(viewport.width * viewport.dpr);
   });
 
   it('laptop 1440x900: 3 columns at 3x with decor strips, the whole office fits', () => {
-    const { layout, scale } = chooseGrid(DEMO, LAPTOP, 'fit');
+    const { layout, scale, cssPerArt } = chooseGrid(DEMO, LAPTOP, 'fit');
     expect(layout.cols).toBe(3);
     expect(scale).toBe(3);
+    expect(cssPerArt).toBe(3);
     expect(layout.roomTiles).toBe(ROOM_TILES_WIDE);
-    expect(layout.width * scale).toBeLessThanOrEqual(LAPTOP.width);
-    expect(layout.height * scale).toBeLessThanOrEqual(LAPTOP.height);
+    expect(layout.width * cssPerArt).toBeLessThanOrEqual(LAPTOP.width);
+    expect(layout.height * cssPerArt).toBeLessThanOrEqual(LAPTOP.height);
+  });
+
+  for (const dpr of [1, 1.25, 2, 2.75, 3]) {
+    it(`the grid does not depend on DPR ${dpr}; device pixels stay whole`, () => {
+      for (const [base, mode, cols] of [
+        [PHONE, 'scroll', 2],
+        [LAPTOP, 'fit', 3],
+      ] as const) {
+        const viewport = { ...base, dpr };
+        const g = chooseGrid(DEMO, viewport, mode);
+        expect(g.layout.cols).toBe(cols);
+        expect(g.scale).toBe(mode === 'scroll' ? 2 : 3);
+        expect(Number.isInteger(g.deviceScale)).toBe(true);
+        expect(g.deviceScale).toBeCloseTo(g.cssPerArt * dpr, 9);
+        // Less than one device pixel per art pixel away from the chosen scale, never overflowing.
+        expect(Math.abs(g.cssPerArt - g.scale)).toBeLessThan(1 / dpr);
+        expect(g.layout.width * g.cssPerArt).toBeLessThanOrEqual(viewport.width);
+        if (mode === 'fit')
+          expect(g.layout.height * g.cssPerArt).toBeLessThanOrEqual(viewport.height);
+      }
+    });
+  }
+
+  it('phone 360 px at DPR 2 also stays in 2 columns without overflow', () => {
+    const viewport = { width: 360, height: 700, dpr: 2 };
+    const { layout, cssPerArt } = chooseGrid(DEMO, viewport, 'scroll');
+    expect(layout.cols).toBe(2);
+    expect(layout.width * cssPerArt).toBeLessThanOrEqual(viewport.width);
   });
 
   it('fit: a huge office keeps 2x and scrolls down instead of shrinking to 1x', () => {
@@ -209,6 +234,37 @@ describe('chooseGrid', () => {
     const { layout, scale } = chooseGrid(many, viewport, 'fit');
     expect(scale).toBe(2);
     expect(layout.width * scale).toBeLessThanOrEqual(viewport.width);
+  });
+
+  it('caps the backing canvas for very tall offices (phone, DPR 3)', () => {
+    for (const count of [9, 60, 400]) {
+      const crowd = Array.from({ length: count }, (_, i) => ({ id: `a${i}`, room: 'server' }));
+      const { layout, deviceScale, cssPerArt } = chooseGrid(crowd, PHONE, 'scroll');
+      const w = layout.width * deviceScale;
+      const h = layout.height * deviceScale;
+      expect(deviceScale).toBeGreaterThanOrEqual(1);
+      if (deviceScale > 1) {
+        expect(w).toBeLessThanOrEqual(MAX_CANVAS_SIDE);
+        expect(h).toBeLessThanOrEqual(MAX_CANVAS_SIDE);
+        expect(w * h).toBeLessThanOrEqual(MAX_CANVAS_AREA);
+      }
+      // The on-screen size does not shrink, only the backing resolution.
+      expect(cssPerArt).toBe(2);
+    }
+  });
+
+  it('backingFor lowers the multiplier only as far as needed', () => {
+    const tall = { width: 176, height: 3000 };
+    const b = backingFor(tall, 2, { width: 390, height: 844, dpr: 3 }, 'scroll');
+    expect(b.deviceScale).toBe(2); // 352 x 6000 px = 2.1 MP; 3 would be 528 x 9000 (side > 8192)
+    expect(b.cssPerArt).toBe(2);
+    const small = backingFor(
+      { width: 176, height: 464 },
+      2,
+      { width: 390, height: 844, dpr: 3 },
+      'scroll',
+    );
+    expect(small.deviceScale).toBe(6);
   });
 
   it('copes with an empty office', () => {

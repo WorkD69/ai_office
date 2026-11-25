@@ -43,10 +43,11 @@ export class OfficeRenderer {
     this.ctx = ctx;
   }
 
-  configure(layout: OfficeLayout, scale: number, art: SceneArt, dpr: number): void {
+  /** `scale`: device pixels per art pixel; `cssPerArt`: CSS pixels per art pixel on screen. */
+  configure(layout: OfficeLayout, scale: number, art: SceneArt, cssPerArt: number): void {
     this.layout = layout;
     this.scale = scale;
-    this.u = dpr / scale;
+    this.u = 1 / cssPerArt;
     this.art = art;
     this.looks = assignLooks([...layout.seats.keys()]);
     this.canvas.width = layout.width * scale;
