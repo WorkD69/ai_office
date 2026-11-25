@@ -119,31 +119,29 @@ button {
   inset: 0;
 }
 
-.office-wrap--fit {
-  overflow: hidden;
-}
-
+/* The office never scrolls sideways; when it is taller than the area, it scrolls down. */
+.office-wrap--fit,
 .office-wrap--scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   scrollbar-width: thin;
+  /* A scrollbar showing up must not change the width and with it the scale. */
+  scrollbar-gutter: stable;
 }
 
 .office-stage {
   position: relative;
-  min-width: 100%;
   min-height: 100%;
-  width: max-content;
   display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .office-canvas {
   display: block;
+  /* Centred while it fits, top-aligned (never cut off) when it scrolls. */
+  margin: auto;
   image-rendering: pixelated;
-  touch-action: pan-x;
+  touch-action: pan-y;
   filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.45));
 }
 

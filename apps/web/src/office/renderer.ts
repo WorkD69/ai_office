@@ -1,30 +1,27 @@
-import type { AgentStatus, Quota } from '@ai-office/protocol';
+import type { AgentStatus } from '@ai-office/protocol';
+import type { SceneArt } from './art';
 import { renderBackground } from './background';
+import { assignLooks } from './characters';
 import {
   drawActivityBubble,
-  drawChart,
-  drawClock,
+  drawBadge,
   drawDesk,
-  drawDeskOverlay,
-  drawQuota,
-  drawRackLeds,
+  drawPlate,
   drawRoomSign,
   drawSelection,
+  INK,
   type SceneAgent,
 } from './dynamic';
 import type { OfficeLayout } from './layout';
-import { roomStyle, SCENE } from './roomStyles';
+import { roomTheme } from './rooms';
 
 export interface SceneLabels {
   room: (roomId: string) => string;
-  futureDesk: string;
-  noQuota: string;
   status: (status: AgentStatus) => string;
 }
 
 export interface SceneFrame {
   agents: readonly SceneAgent[];
-  quota: Quota | null;
   selectedId: string | null;
   hoverId: string | null;
 }
@@ -33,7 +30,11 @@ export interface SceneFrame {
 export class OfficeRenderer {
   private layout: OfficeLayout | null = null;
   private background: HTMLCanvasElement | null = null;
+  private art: SceneArt | null = null;
+  private looks = new Map<string, number>();
   private scale = 1;
+  /** One CSS pixel in art pixels. */
+  private u = 1;
   private readonly ctx: CanvasRenderingContext2D;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -42,64 +43,54 @@ export class OfficeRenderer {
     this.ctx = ctx;
   }
 
-  configure(layout: OfficeLayout, scale: number): void {
+  configure(layout: OfficeLayout, scale: number, art: SceneArt, dpr: number): void {
     this.layout = layout;
     this.scale = scale;
+    this.u = dpr / scale;
+    this.art = art;
+    this.looks = assignLooks([...layout.seats.keys()]);
     this.canvas.width = layout.width * scale;
     this.canvas.height = layout.height * scale;
-    this.background = renderBackground(layout);
+    this.background = renderBackground(layout, art);
   }
 
-  draw(frame: SceneFrame, labels: SceneLabels, t: number, now: Date): void {
-    const { layout, background, ctx } = this;
-    if (!layout || !background) return;
+  /** `still` = prefers-reduced-motion: no blinking, swaying or hopping. */
+  draw(frame: SceneFrame, labels: SceneLabels, t: number, still: boolean): void {
+    const { layout, background, art, ctx } = this;
+    if (!layout || !background || !art) return;
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(background, 0, 0);
 
     const byId = new Map(frame.agents.map((a) => [a.id, a]));
+    const seated = layout.rooms.flatMap((room) =>
+      room.desks.flatMap((desk) => {
+        const agent = byId.get(desk.agentId);
+        return agent ? [{ desk, agent, look: this.looks.get(agent.id) ?? 0 }] : [];
+      }),
+    );
 
-    for (const room of layout.rooms) {
-      drawRoomSign(ctx, room, labels.room(room.id));
-      drawRackLeds(ctx, room, t);
-      for (const item of room.wall) {
-        if (item.kind === 'quota') drawQuota(ctx, item, frame.quota, t, labels.noQuota);
-        else if (item.kind === 'chart') drawChart(ctx, item, t);
-        else if (item.kind === 'clock') drawClock(ctx, item, now);
-      }
-      for (const desk of room.desks) {
-        drawDesk(
-          ctx,
-          desk,
-          desk.agentId ? byId.get(desk.agentId) : undefined,
-          t,
-          labels.futureDesk,
-        );
-      }
-    }
-
-    // Overlays go on top of every desk so bubbles are never hidden by a neighbour.
-    for (const room of layout.rooms) {
-      for (const desk of room.desks) {
-        const agent = desk.agentId ? byId.get(desk.agentId) : undefined;
-        if (agent) drawDeskOverlay(ctx, desk, agent, t);
-      }
-    }
+    for (const { desk, agent, look } of seated) drawDesk(ctx, desk, agent, look, art, t, still);
+    for (const { desk, agent } of seated) drawPlate(ctx, desk, agent, t, still, this.u);
+    // Badges go on top of every desk so a neighbour never hides them.
+    for (const { desk, agent, look } of seated) drawBadge(ctx, desk, agent, look, art, t, still);
+    for (const room of layout.rooms) drawRoomSign(ctx, room, labels.room(room.id), this.u);
 
     if (frame.hoverId && frame.hoverId !== frame.selectedId) {
       const desk = layout.seats.get(frame.hoverId);
-      if (desk) drawSelection(ctx, desk, SCENE.white, t, false);
+      if (desk) drawSelection(ctx, desk, INK.bubble, t, false);
     }
     if (frame.selectedId) {
       const desk = layout.seats.get(frame.selectedId);
       const agent = byId.get(frame.selectedId);
       if (desk && agent) {
-        drawSelection(ctx, desk, roomStyle(desk.roomId).accent, t, true);
+        drawSelection(ctx, desk, roomTheme(desk.roomId).accent, still ? 0 : t, true);
         drawActivityBubble(
           ctx,
           layout,
           desk,
           `${agent.name}: ${agent.activity ?? labels.status(agent.status)}`,
+          this.u,
         );
       }
     }

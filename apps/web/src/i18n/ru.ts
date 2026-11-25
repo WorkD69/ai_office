@@ -130,9 +130,7 @@ export const ru: Record<MessageKey, string> = {
   'room.dev': 'Dev-комната',
   'room.content': 'Контент-отдел',
   'room.lounge': 'Лаунж',
-  'scene.futureDesk': 'Скоро',
   'scene.unavailable': 'Вид офиса недоступен на этом устройстве. Панель работает.',
-  'scene.noQuota': 'нет данных',
   'scene.label': 'Офис, агентов: {count}. Подробности в списке команды.',
   'time.justNow': 'только что',
 };

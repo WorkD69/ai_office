@@ -83,14 +83,14 @@ is listed in [ASSETS.md](ASSETS.md).
 
 ## Status model
 
-| Status             | In the office                    | Meaning                                    | Live data today                            |
-| ------------------ | -------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| `working`          | typing, monitor glowing          | active session with recent activity        | full collector mode only                   |
-| `waiting_you`      | raised hand, blinking `!` bubble | needs an approval or answer from me        | demo only — needs the Hermes API (phase 3) |
-| `waiting_external` | hourglass                        | waiting on an external service             | demo only                                  |
-| `error`            | red `!` and smoke                | gateway/platform failure or failed service | yes                                        |
-| `idle`             | relaxed, floating `z`            | nothing to do                              | yes                                        |
-| `offline`          | empty chair, monitor off         | process or gateway not running             | yes                                        |
+| Status             | In the office                       | Meaning                                    | Live data today                            |
+| ------------------ | ----------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| `working`          | monitor lit and blinking, green dot | active session with recent activity        | full collector mode only                   |
+| `waiting_you`      | raised hand, `!` bubble             | needs an approval or answer from me        | demo only — needs the Hermes API (phase 3) |
+| `waiting_external` | hourglass bubble                    | waiting on an external service             | demo only                                  |
+| `error`            | red monitor, `×` bubble             | gateway/platform failure or failed service | yes                                        |
+| `idle`             | monitor lit, no badge               | nothing to do                              | yes                                        |
+| `offline`          | empty chair, monitor off            | process or gateway not running             | yes                                        |
 
 Failed scheduled jobs and offline agents also land in the "needs you" inbox from live data today.
 Hermes v0.21.6 does not record pending approvals in files, so approvals will appear once the

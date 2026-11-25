@@ -77,8 +77,6 @@ export function App() {
   const labels = useMemo<SceneLabels>(
     () => ({
       room: (id) => roomLabel(tr, id),
-      futureDesk: tr.t('scene.futureDesk'),
-      noQuota: tr.t('scene.noQuota'),
       status: (s) => tr.t(`status.${s}`),
     }),
     [tr],
@@ -158,7 +156,6 @@ export function App() {
             >
               <OfficeCanvas
                 agents={sceneAgents}
-                quota={state.snapshot?.quotas[0] ?? null}
                 selectedId={selectedId}
                 onSelect={select}
                 labels={labels}

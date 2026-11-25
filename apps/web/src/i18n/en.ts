@@ -129,9 +129,7 @@ export const en = {
   'room.dev': 'Dev room',
   'room.content': 'Content team',
   'room.lounge': 'Lounge',
-  'scene.futureDesk': 'Soon',
   'scene.unavailable': 'Office view is unavailable on this device. The panel still works.',
-  'scene.noQuota': 'no quota data',
   'scene.label': 'Office floor with {count} agents. Use the team list for details.',
   'time.justNow': 'just now',
 } as const;
