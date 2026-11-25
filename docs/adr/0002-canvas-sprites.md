@@ -1,6 +1,7 @@
 # ADR 0002 — Canvas 2D with code-defined sprites
 
-- Status: accepted
+- Status: accepted; the code-defined sprites part is superseded by
+  [ADR 0004](0004-pixel-agents-art.md) (lands with ticket #14)
 - Date: 2026-11-19
 
 ## Context
