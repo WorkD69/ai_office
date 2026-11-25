@@ -1,86 +1,100 @@
-import { MARGIN, SIGN_H, WALL_H, type OfficeLayout, type RoomLayout } from './layout';
-import { drawDecor, drawWallItem, px } from './props';
-import { rasterize } from './raster';
-import { roomStyle, SCENE } from './roomStyles';
-import { BASE_PALETTE, PLANT } from './sprites';
+/**
+ * Everything that never moves, rendered once into an offscreen canvas at 1 art pixel per
+ * pixel: floors, walls, wall and floor decor, desks and chairs. Sprites are drawn in order of
+ * their bottom edge, so lower things overlap higher ones (top-down 3/4 view).
+ */
+import type { SceneArt } from './art';
+import { FURNITURE } from './furniture';
+import { TILE, type OfficeLayout } from './layout';
+import { roomTheme } from './rooms';
+import { buildTileMap, cellAt, FLOOR, WALL, wallMask } from './tilemap';
 
-/** Renders everything that never moves into an offscreen canvas at 1 art pixel per pixel. */
-export function renderBackground(layout: OfficeLayout): HTMLCanvasElement {
+/** Empty space around and between rooms. */
+export const VOID_COLOUR = '#14121c';
+
+interface Item {
+  z: number;
+  draw: (ctx: CanvasRenderingContext2D) => void;
+}
+
+export function renderBackground(layout: OfficeLayout, art: SceneArt): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = layout.width;
   canvas.height = layout.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas is not available');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = VOID_COLOUR;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  px(ctx, SCENE.outside, 0, 0, layout.width, layout.height);
-  drawHallway(ctx, layout);
-  const plant = rasterize(PLANT, BASE_PALETTE, 'plant');
-  for (const room of layout.rooms) drawRoom(ctx, room, plant);
-  return canvas;
-}
-
-function drawHallway(ctx: CanvasRenderingContext2D, layout: OfficeLayout): void {
-  const x = MARGIN - 4;
-  const y = MARGIN - 4;
-  const w = layout.width - 2 * (MARGIN - 4);
-  const h = layout.height - 2 * (MARGIN - 4);
-  px(ctx, SCENE.building, x - 2, y - 2, w + 4, h + 4);
-  px(ctx, SCENE.hallway, x, y, w, h);
-  // Staggered wooden planks.
-  for (let py = y; py < y + h; py += 4) {
-    px(ctx, SCENE.hallwayLine, x, py, w, 1);
-    const offset = ((py - y) / 4) % 2 === 0 ? 0 : 12;
-    for (let jx = x + offset; jx < x + w; jx += 24) px(ctx, SCENE.hallwayLine, jx, py, 1, 4);
-  }
-}
-
-function drawRoom(ctx: CanvasRenderingContext2D, room: RoomLayout, plant: CanvasImageSource): void {
-  const style = roomStyle(room.id);
-  const floorY = room.y + WALL_H;
-
-  // Outer wall line.
-  px(ctx, SCENE.outline, room.x - 1, room.y - 1, room.w + 2, room.h + 2);
-
-  // Floor: 8x8 checker carpet with a soft inner border.
-  px(ctx, style.floor, room.x, floorY, room.w, room.h - WALL_H);
-  for (let ty = floorY; ty < room.y + room.h; ty += 8) {
-    for (let tx = room.x; tx < room.x + room.w; tx += 8) {
-      if (((tx - room.x) / 8 + (ty - floorY) / 8) % 2 === 1) {
-        px(
-          ctx,
-          style.floorAlt,
-          tx,
-          ty,
-          Math.min(8, room.x + room.w - tx),
-          Math.min(8, room.y + room.h - ty),
-        );
-      }
+  const map = buildTileMap(layout);
+  for (let r = 0; r < map.h; r++) {
+    for (let c = 0; c < map.w; c++) {
+      const cell = cellAt(map, c, r);
+      const room = layout.rooms[cell - FLOOR];
+      if (cell < FLOOR || !room) continue;
+      const { tile, colour } = roomTheme(room.id).floor;
+      ctx.drawImage(art.floor(tile, colour), c * TILE, r * TILE);
     }
   }
-  px(ctx, style.floorAlt, room.x, floorY, room.w, 2);
 
-  // Wall: plaster, wainscot band, baseboard and a dark top trim.
-  px(ctx, style.wall, room.x, room.y, room.w, WALL_H);
-  px(ctx, style.wallDark, room.x, room.y, room.w, 2);
-  px(ctx, style.wallDark, room.x, room.y + WALL_H - 7, room.w, 4);
-  for (let sx = room.x + 3; sx < room.x + room.w; sx += 6) {
-    px(ctx, style.wall, sx, room.y + WALL_H - 6, 1, 2);
+  const items: Item[] = [];
+  const sprite = (
+    image: CanvasImageSource & { width: number; height: number },
+    x: number,
+    y: number,
+    z: number,
+    mirror = false,
+  ) =>
+    items.push({
+      z,
+      draw: (g) => {
+        if (!mirror) {
+          g.drawImage(image, x, y);
+          return;
+        }
+        g.save();
+        g.translate(x + image.width, y);
+        g.scale(-1, 1);
+        g.drawImage(image, 0, 0);
+        g.restore();
+      },
+    });
+
+  // Walls: each piece is 16x32 and covers the tile above its own.
+  for (let r = 0; r < map.h; r++) {
+    for (let c = 0; c < map.w; c++) {
+      if (cellAt(map, c, r) !== WALL) continue;
+      const mask = wallMask(map, c, r);
+      const sx = (mask % 4) * TILE;
+      const sy = Math.floor(mask / 4) * 2 * TILE;
+      items.push({
+        z: (r + 1) * TILE,
+        draw: (g) =>
+          g.drawImage(art.wall, sx, sy, TILE, 2 * TILE, c * TILE, (r - 1) * TILE, TILE, 2 * TILE),
+      });
+    }
   }
-  px(ctx, SCENE.outline, room.x, room.y + WALL_H - 3, room.w, 1);
-  px(ctx, '#d9c3a0', room.x, room.y + WALL_H - 2, room.w, 2);
 
-  for (const item of room.wall) drawWallItem(ctx, item);
+  for (const room of layout.rooms) {
+    for (const decor of room.decor) {
+      decor.parts.forEach((part, i) => {
+        const image = art.decor[part.id];
+        if (!image) return;
+        const x = (decor.tx + part.dx) * TILE;
+        const y = (decor.ty + part.dy) * TILE;
+        // Wall decor hangs in front of its wall row; parts stack in the order they are listed.
+        const base = decor.layer === 'wall' ? (decor.ty + 2) * TILE + 0.5 : y + image.height;
+        sprite(image, x, y, base + i * 0.01 + (i > 0 ? decor.th * TILE : 0), part.mirror);
+      });
+    }
+    for (const desk of room.desks) {
+      const deskY = desk.y;
+      sprite(art.desk, desk.x + TILE, deskY, deskY + FURNITURE.DESK_FRONT.h * TILE);
+      sprite(art.chair, desk.x + 2 * TILE, deskY + 2 * TILE, deskY + 3 * TILE);
+    }
+  }
 
-  // Sign plate frame (the text is drawn crisp in the dynamic pass).
-  const sign = signRect(room);
-  px(ctx, SCENE.outline, sign.x, sign.y, sign.w, sign.h);
-  px(ctx, SCENE.plate, sign.x + 1, sign.y + 1, sign.w - 2, sign.h - 2);
-  px(ctx, style.accent, sign.x + 1, sign.y + sign.h - 2, sign.w - 2, 1);
-
-  for (const d of room.decor) drawDecor(ctx, d, plant);
-}
-
-export function signRect(room: RoomLayout): { x: number; y: number; w: number; h: number } {
-  const w = 76;
-  return { x: room.x + 6, y: room.y + WALL_H + 2, w, h: SIGN_H - 3 };
+  items.sort((a, b) => a.z - b.z).forEach((item) => item.draw(ctx));
+  return canvas;
 }

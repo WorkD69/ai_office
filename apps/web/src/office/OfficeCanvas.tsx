@@ -6,22 +6,26 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
-import type { Agent, Quota } from '@ai-office/protocol';
-import { chooseGrid, hitTest, type OfficeLayout } from './layout';
+import type { Agent } from '@ai-office/protocol';
+import { loadSceneArt, type SceneArt } from './art';
+import { chooseGrid, hitTest, type Grid, type OfficeLayout } from './layout';
 import { OfficeRenderer, type SceneLabels } from './renderer';
 
 interface Props {
   agents: readonly Agent[];
-  quota: Quota | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   labels: SceneLabels;
   ariaLabel: string;
-  /** `fit` shows the whole office; `scroll` (phones) keeps it large and pans sideways. */
+  /** `fit` shows the whole office; `scroll` (phones) fills the width and scrolls down. */
   mode: 'fit' | 'scroll';
   statusLabel: (agent: Agent) => string;
   /** Shown instead of the scene when the device cannot give us a 2D canvas. */
   unavailableText: string;
+  /** Shown while the art loads, and when it fails (with a retry button). */
+  loadingText: string;
+  artFailedText: string;
+  retryText: string;
 }
 
 const FRAME_MS = 1000 / 30;
@@ -34,7 +38,6 @@ interface Size {
 
 export function OfficeCanvas({
   agents,
-  quota,
   selectedId,
   onSelect,
   labels,
@@ -42,6 +45,9 @@ export function OfficeCanvas({
   mode,
   statusLabel,
   unavailableText,
+  loadingText,
+  artFailedText,
+  retryText,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,14 +55,36 @@ export function OfficeCanvas({
   const [size, setSize] = useState<Size | null>(null);
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [failed, setFailed] = useState(false);
+  const [art, setArt] = useState<SceneArt | null>(null);
+  const [artFailed, setArtFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  /** The grid the canvas is sized for (set once the art is in and the buffer is ready). */
+  const [configured, setConfigured] = useState<Grid | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setArtFailed(false);
+    loadSceneArt().then(
+      (loaded) => {
+        if (live) setArt(loaded);
+      },
+      (err: unknown) => {
+        console.error('Office art failed to load', err);
+        if (live) setArtFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
   // The animation loop reads the latest props through a ref so it never has to restart.
   // Updated in a layout effect (not during render) so React can safely re-run renders.
   const hoverId = hover?.id ?? null;
-  const frameRef = useRef({ agents, quota, selectedId, hoverId, labels });
+  const frameRef = useRef({ agents, selectedId, hoverId, labels });
   useLayoutEffect(() => {
-    frameRef.current = { agents, quota, selectedId, hoverId, labels };
-  }, [agents, quota, selectedId, hoverId, labels]);
+    frameRef.current = { agents, selectedId, hoverId, labels };
+  }, [agents, selectedId, hoverId, labels]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -93,7 +121,7 @@ export function OfficeCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !grid || !size || failed) return;
+    if (!canvas || !grid || !size || !art || failed) return;
     if (!rendererRef.current) {
       try {
         rendererRef.current = new OfficeRenderer(canvas);
@@ -103,20 +131,22 @@ export function OfficeCanvas({
         return;
       }
     }
-    rendererRef.current.configure(grid.layout, grid.scale);
-    canvas.style.width = `${(grid.layout.width * grid.scale) / size.dpr}px`;
-    canvas.style.height = `${(grid.layout.height * grid.scale) / size.dpr}px`;
-  }, [grid, size, failed]);
+    rendererRef.current.configure(grid.layout, grid.deviceScale, art, grid.cssPerArt);
+    canvas.style.width = `${grid.layout.width * grid.cssPerArt}px`;
+    canvas.style.height = `${grid.layout.height * grid.cssPerArt}px`;
+    setConfigured(grid);
+  }, [grid, size, art, failed]);
 
   useEffect(() => {
     let raf = 0;
     let last = 0;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop);
       if (t - last < FRAME_MS) return;
       last = t;
       const f = frameRef.current;
-      rendererRef.current?.draw(f, f.labels, t, new Date());
+      rendererRef.current?.draw(f, f.labels, t, motion.matches);
     };
     const start = () => {
       cancelAnimationFrame(raf);
@@ -130,16 +160,17 @@ export function OfficeCanvas({
     };
   }, []);
 
-  // Keep the selected desk visible when the office is wider than the screen.
+  // Keep the selected desk visible when the office is taller than the area. Runs once the
+  // canvas has its buffer and CSS size, so `?select=` on a fresh load lands on the desk.
   useEffect(() => {
     const wrap = wrapRef.current;
-    if (!wrap || !grid || !size || !selectedId || mode !== 'scroll') return;
-    const desk = grid.layout.seats.get(selectedId);
-    if (!desk) return;
-    const cssScale = grid.scale / size.dpr;
-    const centre = (desk.x + desk.w / 2) * cssScale;
-    wrap.scrollTo({ left: centre - wrap.clientWidth / 2, behavior: 'smooth' });
-  }, [selectedId, grid, size, mode]);
+    if (!wrap || !configured || !selectedId) return;
+    const desk = configured.layout.seats.get(selectedId);
+    if (!desk || wrap.scrollHeight <= wrap.clientHeight) return;
+    const centre = (desk.y + desk.h / 2) * configured.cssPerArt;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    wrap.scrollTo({ top: centre - wrap.clientHeight / 2, behavior: still ? 'auto' : 'smooth' });
+  }, [selectedId, configured]);
 
   const toLogical = (e: ReactMouseEvent<HTMLCanvasElement>, layout: OfficeLayout) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -189,6 +220,24 @@ export function OfficeCanvas({
           </div>
         )}
       </div>
+      {!art && (
+        <div className="office-status" role={artFailed ? 'alert' : 'status'}>
+          {artFailed ? (
+            <div>
+              <p>{artFailedText}</p>
+              <button
+                type="button"
+                className="office-status__retry"
+                onClick={() => setAttempt((n) => n + 1)}
+              >
+                {retryText}
+              </button>
+            </div>
+          ) : (
+            loadingText
+          )}
+        </div>
+      )}
     </div>
   );
 }
