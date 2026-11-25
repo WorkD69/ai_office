@@ -76,8 +76,10 @@ More detail: [architecture](docs/architecture.md) · [ADRs](docs/adr) · [securi
 | [`apps/web`](apps/web)                   | Pixel office + panel, demo mode, Telegram integration, en/ru | React 19, Vite, Canvas 2D                  |
 | [`apps/collector`](apps/collector)       | Reads Hermes/systemd/host state, pushes snapshots            | Python 3.12 (stdlib + websockets), systemd |
 
-All art is drawn in code (palette-indexed sprites), so the repository has no third-party asset
-licences to worry about. See [ASSETS.md](ASSETS.md).
+The office art (floors, walls, furniture, 16×32 characters) is from
+[Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) `v1.6.0` (MIT; characters based on
+JIK-A-4's MetroCity, CC0), drawn by our own Canvas 2D renderer. Every copied file and its licence
+is listed in [ASSETS.md](ASSETS.md).
 
 ## Status model
 
